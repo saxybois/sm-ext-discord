@@ -79,8 +79,9 @@ void cluster::channel_invite_create(const class channel &c, const class invite &
 	rest_request<invite>(this, API_PATH "/channels", std::to_string(c.id), "invites", m_post, i.build_json(), callback);
 }
 
+// Fix: channel_invites_get incorrect endpoint (https://github.com/brainboxdotcc/DPP/pulls/1497)
 void cluster::channel_invites_get(const class channel &c, command_completion_event_t callback) {
-	rest_request_list<invite>(this, API_PATH "/channels", std::to_string(c.id), "", m_get, "", callback);
+	rest_request_list<invite>(this, API_PATH "/channels", std::to_string(c.id), "invites", m_get, "", callback);
 }
 
 void cluster::channel_typing(const class channel &c, command_completion_event_t callback) {

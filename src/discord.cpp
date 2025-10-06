@@ -24,6 +24,14 @@ static DiscordGuild* GetGuildPointer(IPluginContext* pContext, Handle_t handle) 
 	return GetHandlePointer<DiscordGuild>(pContext, handle, g_DiscordGuildHandle, "Discord guild");
 }
 
+static DiscordRole* GetRolePointer(IPluginContext* pContext, Handle_t handle) {
+	return GetHandlePointer<DiscordRole>(pContext, handle, g_DiscordRoleHandle, "Discord role");
+}
+
+static DiscordInvite* GetInvitePointer(IPluginContext* pContext, Handle_t handle) {
+	return GetHandlePointer<DiscordInvite>(pContext, handle, g_DiscordInviteHandle, "DiscordInvite");
+}
+
 static DiscordMessage* GetMessagePointer(IPluginContext* pContext, Handle_t handle) {
 	return GetHandlePointer<DiscordMessage>(pContext, handle, g_DiscordMessageHandle, "Discord message");
 }
@@ -54,12 +62,12 @@ static HttpCompletion* GetHttpCompletionPointer(IPluginContext* pContext, Handle
 
 bool DiscordUser::HasPermission(const char* permission) const {
 	if (!m_has_member || !permission) return false;
-	
+
 	try {
 		uint64_t perm = std::stoull(permission);
 		dpp::guild* g = dpp::find_guild(m_member.guild_id);
 		if (!g) return false;
-		
+
 		uint64_t base_perms = g->base_permissions(&m_user);
 		dpp::permission perms(base_perms);
 		return perms.has(perm);
@@ -71,23 +79,23 @@ bool DiscordUser::HasPermission(const char* permission) const {
 
 uint64_t DiscordUser::GetPermissions() const {
 	if (!m_has_member) return 0;
-	
+
 	dpp::guild* g = dpp::find_guild(m_member.guild_id);
 	if (!g) return 0;
-	
+
 	uint64_t base_perms = g->base_permissions(&m_user);
 	return base_perms;
 }
 
 bool DiscordUser::HasPermissionInChannel(dpp::snowflake channel_id, const char* permission) const {
 	if (!m_has_member || !permission) return false;
-	
+
 	try {
 		uint64_t perm = std::stoull(permission);
 		dpp::guild* g = dpp::find_guild(m_member.guild_id);
 		dpp::channel* c = dpp::find_channel(channel_id);
 		if (!g || !c) return false;
-		
+
 		dpp::permission perms = g->permission_overwrites(m_member, *c);
 		return perms.has(perm);
 	}
@@ -98,11 +106,11 @@ bool DiscordUser::HasPermissionInChannel(dpp::snowflake channel_id, const char* 
 
 uint64_t DiscordUser::GetPermissionsInChannel(dpp::snowflake channel_id) const {
 	if (!m_has_member) return 0;
-	
+
 	dpp::guild* g = dpp::find_guild(m_member.guild_id);
 	dpp::channel* c = dpp::find_channel(channel_id);
 	if (!g || !c) return 0;
-	
+
 	dpp::permission perms = g->permission_overwrites(m_member, *c);
 	return static_cast<uint64_t>(perms);
 }
@@ -114,7 +122,7 @@ std::vector<dpp::snowflake> DiscordUser::GetRoles() const {
 
 bool DiscordUser::HasRole(dpp::snowflake role_id) const {
 	if (!m_has_member) return false;
-	
+
 	std::vector<dpp::snowflake> roles = m_member.get_roles();
 	for (const auto& role : roles) {
 		if (role == role_id) return true;
@@ -124,10 +132,10 @@ bool DiscordUser::HasRole(dpp::snowflake role_id) const {
 
 bool DiscordUser::HasAnyRole(const std::vector<dpp::snowflake>& role_ids) const {
 	if (!m_has_member) return false;
-	
+
 	std::vector<dpp::snowflake> user_roles = m_member.get_roles();
 	std::unordered_set<dpp::snowflake> user_role_set(user_roles.begin(), user_roles.end());
-	
+
 	for (const auto& target_role : role_ids) {
 		if (user_role_set.count(target_role)) {
 			return true;
@@ -138,10 +146,10 @@ bool DiscordUser::HasAnyRole(const std::vector<dpp::snowflake>& role_ids) const 
 
 bool DiscordUser::HasAllRoles(const std::vector<dpp::snowflake>& role_ids) const {
 	if (!m_has_member) return false;
-	
+
 	std::vector<dpp::snowflake> user_roles = m_member.get_roles();
 	std::unordered_set<dpp::snowflake> user_role_set(user_roles.begin(), user_roles.end());
-	
+
 	for (const auto& target_role : role_ids) {
 		if (!user_role_set.count(target_role)) {
 			return false;
@@ -152,16 +160,16 @@ bool DiscordUser::HasAllRoles(const std::vector<dpp::snowflake>& role_ids) const
 
 dpp::snowflake DiscordUser::GetHighestRole() const {
 	if (!m_has_member) return 0;
-	
+
 	dpp::guild* g = dpp::find_guild(m_member.guild_id);
 	if (!g) return 0;
-	
+
 	std::vector<dpp::snowflake> user_roles = m_member.get_roles();
 	if (user_roles.empty()) return 0;
-	
+
 	dpp::snowflake highest_role = 0;
 	int highest_position = -1;
-	
+
 	for (const auto& role_id : user_roles) {
 		dpp::role* role = dpp::find_role(role_id);
 		if (role && role->position > highest_position) {
@@ -169,23 +177,23 @@ dpp::snowflake DiscordUser::GetHighestRole() const {
 			highest_role = role_id;
 		}
 	}
-	
+
 	return highest_role;
 }
 
 std::string DiscordUser::GetRoleName(dpp::snowflake role_id) const {
 	if (!m_has_member) return "";
-	
+
 	dpp::role* role = dpp::find_role(role_id);
 	if (!role) return "";
-	
+
 	return role->name;
 }
 
 std::vector<std::string> DiscordUser::GetRoleNames() const {
 	std::vector<std::string> role_names;
 	if (!m_has_member) return role_names;
-	
+
 	std::vector<dpp::snowflake> user_roles = m_member.get_roles();
 	for (const auto& role_id : user_roles) {
 		dpp::role* role = dpp::find_role(role_id);
@@ -193,17 +201,17 @@ std::vector<std::string> DiscordUser::GetRoleNames() const {
 			role_names.push_back(role->name);
 		}
 	}
-	
+
 	return role_names;
 }
 
 bool DiscordSlashCommand::Update(dpp::snowflake guild_id) {
 	if (!m_client) return false;
-	
+
 	try {
 		// Use provided guild_id or stored m_guild_id
 		dpp::snowflake target_guild = (guild_id != 0) ? guild_id : m_guild_id;
-		
+
 		if (target_guild != 0) {
 			// Update guild command
 			m_client->GetCluster()->guild_command_edit(m_command, target_guild);
@@ -220,10 +228,10 @@ bool DiscordSlashCommand::Update(dpp::snowflake guild_id) {
 
 bool DiscordSlashCommand::Delete(dpp::snowflake guild_id) {
 	if (!m_client) return false;
-	
+
 	try {
 		dpp::snowflake target_guild = (guild_id != 0) ? guild_id : m_guild_id;
-		
+
 		if (target_guild != 0) {
 			return m_client->DeleteGuildCommand(target_guild, m_command.id);
 		} else {
@@ -237,13 +245,13 @@ bool DiscordSlashCommand::Delete(dpp::snowflake guild_id) {
 
 bool DiscordSlashCommand::ApplyPermissionOverrides(dpp::snowflake guild_id) {
 	if (!m_client) return false;
-	
+
 	try {
 		dpp::snowflake target_guild = (guild_id != 0) ? guild_id : m_guild_id;
 		if (target_guild == 0) return false;
-		
+
 		m_command.permissions = m_permissions;
-		
+
 		m_client->GetCluster()->guild_command_edit_permissions(m_command, target_guild);
 		return true;
 	}
@@ -330,7 +338,7 @@ bool DiscordWebhook::CreateWebhook(DiscordClient* client, dpp::webhook wh, IForw
 
 bool DiscordWebhook::GetWebhook(DiscordClient* client, dpp::snowflake webhook_id, IForward* callback_forward, cell_t data) {
 	if (!client || !client->IsRunning()) return false;
-	
+
 	try {
 		client->GetCluster()->get_webhook(webhook_id, [client, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback) {
 			if (callback.is_error()) {
@@ -346,7 +354,7 @@ bool DiscordWebhook::GetWebhook(DiscordClient* client, dpp::snowflake webhook_id
 					forwards->ReleaseForward(forward);
 					return;
 				}
-				
+
 				HandleError err;
 				HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
 				Handle_t webhookHandle = handlesys->CreateHandleEx(g_DiscordWebhookHandle, webhook, &sec, nullptr, &err);
@@ -357,12 +365,12 @@ bool DiscordWebhook::GetWebhook(DiscordClient* client, dpp::snowflake webhook_id
 					forwards->ReleaseForward(forward);
 					return;
 				}
-				
+
 				forward->PushCell(client->GetHandle());
 				forward->PushCell(webhookHandle);
 				forward->PushCell(value);
 				forward->Execute(nullptr);
-				
+
 				handlesys->FreeHandle(webhookHandle, &sec);
 				forwards->ReleaseForward(forward);
 			});
@@ -399,36 +407,39 @@ bool DiscordWebhook::GetChannelWebhooks(DiscordClient* client, dpp::snowflake ch
 					return;
 				}
 
-				size_t webhook_count = webhooks.size();
-				std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(webhook_count);
+			size_t webhook_count = webhooks.size();
+			std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(webhook_count);
 
-				HandleError err;
-				HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
-				size_t i = 0;
-				for (auto pair : webhooks)
+			HandleError err;
+			HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+			size_t i = 0;
+			for (auto pair : webhooks)
+			{
+				DiscordWebhook* wbk = new DiscordWebhook(pair.second, client);
+				Handle_t webhookHandle = handlesys->CreateHandleEx(g_DiscordWebhookHandle, wbk, &sec, nullptr, &err);
+
+				if (!webhookHandle)
 				{
-					DiscordWebhook* wbk = new DiscordWebhook(pair.second, client);
-					Handle_t webhookHandle = handlesys->CreateHandleEx(g_DiscordWebhookHandle, wbk, &sec, nullptr, &err);
-
-					if (!webhookHandle)
-					{
-						smutils->LogError(myself, "Could not create webhook handle (error %d)", err);
-						delete wbk;
-						continue;
-					}
-					handles[i++] = webhookHandle;
+					smutils->LogError(myself, "Could not create webhook handle (error %d)", err);
+					delete wbk;
+					continue;
 				}
+				handles[i++] = webhookHandle;
+			}
 
-				forward->PushCell(client->GetHandle());
-				forward->PushArray(handles.get(), static_cast<unsigned int>(webhook_count));
-				forward->PushCell(static_cast<unsigned int>(webhook_count));
-				forward->PushCell(value);
-				forward->Execute(nullptr);
+			// Use actual count of created handles
+			size_t actual_count = i;
 
-				for (i = 0; i < webhook_count; i++)
-				{
-					handlesys->FreeHandle(handles[i], &sec);
-				}
+			forward->PushCell(client->GetHandle());
+			forward->PushArray(handles.get(), static_cast<unsigned int>(actual_count));
+			forward->PushCell(static_cast<unsigned int>(actual_count));
+			forward->PushCell(value);
+			forward->Execute(nullptr);
+
+			for (i = 0; i < actual_count; i++)
+			{
+				handlesys->FreeHandle(handles[i], &sec);
+			}
 
 				forwards->ReleaseForward(forward);
 			});
@@ -441,51 +452,120 @@ bool DiscordWebhook::GetChannelWebhooks(DiscordClient* client, dpp::snowflake ch
 	}
 }
 
+bool DiscordWebhook::GetGuildWebhooks(DiscordClient* client, dpp::snowflake guild_id, IForward *callback_forward, cell_t data)
+{
+	if (!client || !client->IsRunning()) {
+		return false;
+	}
+
+	try {
+		client->GetCluster()->get_guild_webhooks(guild_id, [client, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback)
+		{
+			if (callback.is_error())
+			{
+				smutils->LogError(myself, "Failed to get guild webhooks: %s", callback.get_error().message.c_str());
+				forwards->ReleaseForward(forward);
+				return;
+			}
+			auto webhook_map = callback.get<dpp::webhook_map>();
+
+			g_TaskQueue.Push([client, forward, webhooks = webhook_map, value = value]() {
+				if (!forward || !forward->GetFunctionCount())
+				{
+					forwards->ReleaseForward(forward);
+					return;
+				}
+
+			size_t webhook_count = webhooks.size();
+			std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(webhook_count);
+
+			HandleError err;
+			HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+			size_t i = 0;
+			for (auto pair : webhooks)
+			{
+				DiscordWebhook* wbk = new DiscordWebhook(pair.second, client);
+				Handle_t webhookHandle = handlesys->CreateHandleEx(g_DiscordWebhookHandle, wbk, &sec, nullptr, &err);
+
+				if (!webhookHandle)
+				{
+					smutils->LogError(myself, "Could not create webhook handle (error %d)", err);
+					delete wbk;
+					continue;
+				}
+				handles[i++] = webhookHandle;
+			}
+
+			// Use actual count of created handles
+			size_t actual_count = i;
+
+			forward->PushCell(client->GetHandle());
+			forward->PushArray(handles.get(), static_cast<unsigned int>(actual_count));
+			forward->PushCell(static_cast<unsigned int>(actual_count));
+			forward->PushCell(value);
+			forward->Execute(nullptr);
+
+			for (i = 0; i < actual_count; i++)
+			{
+				handlesys->FreeHandle(handles[i], &sec);
+			}
+
+				forwards->ReleaseForward(forward);
+			});
+		});
+		return true;
+	}
+	catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to get guild webhooks: %s", e.what());
+		return false;
+	}
+}
+
 bool DiscordUser::SetNickName(const char* nickname) {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->ModifyMember(m_member.guild_id, m_user.id, nickname ? nickname : "");
 }
 
 bool DiscordUser::AddRole(dpp::snowflake role_id) {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->AddMemberRole(m_member.guild_id, m_user.id, role_id);
 }
 
 bool DiscordUser::RemoveRole(dpp::snowflake role_id) {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->RemoveMemberRole(m_member.guild_id, m_user.id, role_id);
 }
 
 bool DiscordUser::KickFromGuild() {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->KickMember(m_member.guild_id, m_user.id);
 }
 
 bool DiscordUser::BanFromGuild(const char* reason, int delete_message_days) {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->BanMember(m_member.guild_id, m_user.id, reason, delete_message_days);
 }
 
 bool DiscordUser::UnbanFromGuild() {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->UnbanMember(m_member.guild_id, m_user.id);
 }
 
 bool DiscordUser::SetTimeout(time_t timeout_until) {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->TimeoutMember(m_member.guild_id, m_user.id, timeout_until);
 }
 
 bool DiscordUser::RemoveTimeout() {
 	if (!m_client || !m_has_member) return false;
-	
+
 	return m_client->RemoveTimeout(m_member.guild_id, m_user.id);
 }
 
@@ -531,7 +611,7 @@ bool DiscordMessage::RemoveAllReactions() {
 
 bool DiscordMessage::Reply(const char* content) {
 	if (!m_client || !content) return false;
-	
+
 	try {
 		dpp::message reply_msg;
 		reply_msg.set_content(content);
@@ -550,7 +630,7 @@ bool DiscordMessage::Reply(const char* content) {
 
 bool DiscordMessage::ReplyEmbed(const char* content, const DiscordEmbed* embed) {
 	if (!m_client || !embed) return false;
-	
+
 	try {
 		dpp::message reply_msg;
 		if (content && strlen(content) > 0) {
@@ -572,7 +652,7 @@ bool DiscordMessage::ReplyEmbed(const char* content, const DiscordEmbed* embed) 
 
 bool DiscordMessage::Crosspost() {
 	if (!m_client) return false;
-	
+
 	try {
 		m_client->GetCluster()->message_crosspost(m_message.id, m_message.channel_id);
 		return true;
@@ -585,7 +665,7 @@ bool DiscordMessage::Crosspost() {
 
 bool DiscordMessage::CreateThread(const char* name, int auto_archive_duration) {
 	if (!m_client || !name) return false;
-	
+
 	try {
 		m_client->GetCluster()->thread_create_with_message(
 			name,
@@ -604,12 +684,12 @@ bool DiscordMessage::CreateThread(const char* name, int auto_archive_duration) {
 
 bool DiscordMessage::Send() {
 	if (!m_client) return false;
-	
+
 	if (m_message.channel_id == 0) {
 		smutils->LogError(myself, "Cannot send message: channel_id not set");
 		return false;
 	}
-	
+
 	try {
 		m_client->GetCluster()->message_create(m_message);
 		return true;
@@ -622,12 +702,12 @@ bool DiscordMessage::Send() {
 
 bool DiscordChannel::HasUserPermission(const dpp::user& user, const char* permission) const {
 	if (!permission) return false;
-	
+
 	try {
 		uint64_t perm = std::stoull(permission);
 		dpp::guild* g = dpp::find_guild(m_channel.guild_id);
 		if (!g) return false;
-		
+
 		uint64_t base_perms = g->base_permissions(&user);
 		dpp::permission perms = g->permission_overwrites(base_perms, &user, &m_channel);
 		return perms.has(perm);
@@ -639,12 +719,12 @@ bool DiscordChannel::HasUserPermission(const dpp::user& user, const char* permis
 
 bool DiscordChannel::HasMemberPermission(const dpp::guild_member& member, const char* permission) const {
 	if (!permission) return false;
-	
+
 	try {
 		uint64_t perm = std::stoull(permission);
 		dpp::guild* g = dpp::find_guild(m_channel.guild_id);
 		if (!g) return false;
-		
+
 		dpp::permission perms = g->permission_overwrites(member, m_channel);
 		return perms.has(perm);
 	}
@@ -700,16 +780,16 @@ bool DiscordChannel::SetParent(dpp::snowflake parent_id) {
 
 bool DiscordChannel::AddPermissionOverwrite(dpp::snowflake target_id, uint8_t type, uint64_t allowed, uint64_t denied) {
 	if (!m_client) return false;
-	
+
 	try {
 		dpp::permission_overwrite overwrite;
 		overwrite.id = target_id;
 		overwrite.type = static_cast<dpp::overwrite_type>(type);
 		overwrite.allow = allowed;
 		overwrite.deny = denied;
-		
+
 		m_channel.permission_overwrites.push_back(overwrite);
-		
+
 		m_client->GetCluster()->channel_edit(m_channel);
 		return true;
 	}
@@ -721,14 +801,14 @@ bool DiscordChannel::AddPermissionOverwrite(dpp::snowflake target_id, uint8_t ty
 
 bool DiscordChannel::SetPermissionOverwrite(dpp::snowflake target_id, uint8_t type, uint64_t allowed, uint64_t denied) {
 	if (!m_client) return false;
-	
+
 	try {
 		dpp::permission_overwrite overwrite;
 		overwrite.id = target_id;
 		overwrite.type = static_cast<dpp::overwrite_type>(type);
 		overwrite.allow = allowed;
 		overwrite.deny = denied;
-		
+
 		auto& overwrites = m_channel.permission_overwrites;
 		bool found = false;
 		for (auto& existing : overwrites) {
@@ -739,11 +819,11 @@ bool DiscordChannel::SetPermissionOverwrite(dpp::snowflake target_id, uint8_t ty
 				break;
 			}
 		}
-		
+
 		if (!found) {
 			overwrites.push_back(overwrite);
 		}
-		
+
 		m_client->GetCluster()->channel_edit(m_channel);
 		return true;
 	}
@@ -755,7 +835,7 @@ bool DiscordChannel::SetPermissionOverwrite(dpp::snowflake target_id, uint8_t ty
 
 bool DiscordChannel::RemovePermissionOverwrite(dpp::snowflake target_id, uint8_t type) {
 	if (!m_client) return false;
-	
+
 	try {
 		auto& overwrites = m_channel.permission_overwrites;
 		for (auto it = overwrites.begin(); it != overwrites.end(); ++it) {
@@ -764,7 +844,7 @@ bool DiscordChannel::RemovePermissionOverwrite(dpp::snowflake target_id, uint8_t
 				break;
 			}
 		}
-		
+
 		m_client->GetCluster()->channel_edit(m_channel);
 		return true;
 	}
@@ -778,28 +858,28 @@ std::string DiscordChannel::GetUserPermissions(dpp::snowflake user_id) const {
 	try {
 		dpp::guild* g = dpp::find_guild(m_channel.guild_id);
 		dpp::user* u = dpp::find_user(user_id);
-		if (!g || !u) return "-1";
-		
+		if (!g || !u) return "";
+
 		uint64_t base_perms = g->base_permissions(u);
 		dpp::permission perms = g->permission_overwrites(base_perms, u, &m_channel);
-		
+
 		return std::to_string(static_cast<uint64_t>(perms));
 	}
 	catch (const std::exception& e) {
-		return "-1";
+		return "";
 	}
 }
 
 bool DiscordChannel::CreateInvite(int max_age, int max_uses, bool temporary, bool unique) {
 	if (!m_client) return false;
-	
+
 	try {
 		dpp::invite invite;
 		invite.max_age = max_age;
 		invite.max_uses = max_uses;
 		invite.temporary = temporary;
 		invite.unique = unique;
-		
+
 		m_client->GetCluster()->channel_invite_create(m_channel, invite);
 		return true;
 	}
@@ -809,29 +889,157 @@ bool DiscordChannel::CreateInvite(int max_age, int max_uses, bool temporary, boo
 	}
 }
 
-bool DiscordChannel::GetInvites() {
-	// TODO: Implement this
-	return false;
-}
+bool DiscordChannel::CreateInviteFromObject(const DiscordInvite* invite_obj) {
+	if (!m_client || !invite_obj) return false;
 
-bool DiscordChannel::DeleteInvite(const char* invite_code) {
-	if (!m_client || !m_client->IsRunning() || !invite_code) {
-		return false;
-	}
-	
 	try {
-		m_client->GetCluster()->invite_delete(invite_code);
+		m_client->GetCluster()->channel_invite_create(m_channel, invite_obj->GetDPPInvite());
 		return true;
 	}
 	catch (const std::exception& e) {
-		smutils->LogError(myself, "Failed to delete invite: %s", e.what());
+		smutils->LogError(myself, "Failed to create invite from object: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordChannel::GetInvites(IForward* callback_forward, cell_t data) {
+	if (!m_client || !m_client->IsRunning() || !callback_forward) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->channel_invites_get(m_channel, [client = m_client, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback)
+		{
+			if (callback.is_error())
+			{
+				smutils->LogError(myself, "Failed to get channel invites: %s", callback.get_error().message.c_str());
+				forwards->ReleaseForward(forward);
+				return;
+			}
+			auto invite_list = callback.get<dpp::invite_map>();
+
+			g_TaskQueue.Push([client, forward, invites = invite_list, value = value]() {
+				if (!forward || !forward->GetFunctionCount())
+				{
+					forwards->ReleaseForward(forward);
+					return;
+				}
+
+				size_t invite_count = invites.size();
+				std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(invite_count);
+
+				HandleError err;
+				HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+				size_t i = 0;
+				for (const auto& pair : invites)
+				{
+					DiscordInvite* invite_obj = new DiscordInvite(pair.second, client);
+					Handle_t inviteHandle = handlesys->CreateHandleEx(g_DiscordInviteHandle, invite_obj, &sec, nullptr, &err);
+
+					if (!inviteHandle)
+					{
+						smutils->LogError(myself, "Could not create invite handle (error %d)", err);
+						delete invite_obj;
+						continue;
+					}
+					handles[i++] = inviteHandle;
+				}
+
+				// Use actual count of created handles
+				size_t actual_count = i;
+
+				forward->PushCell(client->GetHandle());
+				forward->PushArray(handles.get(), static_cast<unsigned int>(actual_count));
+				forward->PushCell(static_cast<unsigned int>(actual_count));
+				forward->PushCell(value);
+				forward->Execute(nullptr);
+
+				for (i = 0; i < actual_count; i++)
+				{
+					handlesys->FreeHandle(handles[i], &sec);
+				}
+
+				forwards->ReleaseForward(forward);
+			});
+		});
+		return true;
+	}
+	catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to get channel invites: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordChannel::GetWebhooks(IForward* callback_forward, cell_t data) {
+	if (!m_client || !m_client->IsRunning() || !callback_forward) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->get_channel_webhooks(m_channel.id, [client = m_client, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback)
+		{
+			if (callback.is_error())
+			{
+				smutils->LogError(myself, "Failed to get channel webhooks: %s", callback.get_error().message.c_str());
+				forwards->ReleaseForward(forward);
+				return;
+			}
+			auto webhook_list = callback.get<dpp::webhook_map>();
+
+			g_TaskQueue.Push([client, forward, webhooks = webhook_list, value = value]() {
+				if (!forward || !forward->GetFunctionCount())
+				{
+					forwards->ReleaseForward(forward);
+					return;
+				}
+
+				size_t webhook_count = webhooks.size();
+				std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(webhook_count);
+
+				HandleError err;
+				HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+				size_t i = 0;
+				for (const auto& pair : webhooks)
+				{
+					DiscordWebhook* webhook_obj = new DiscordWebhook(pair.second, client);
+					Handle_t webhookHandle = handlesys->CreateHandleEx(g_DiscordWebhookHandle, webhook_obj, &sec, nullptr, &err);
+
+					if (!webhookHandle)
+					{
+						smutils->LogError(myself, "Could not create webhook handle (error %d)", err);
+						delete webhook_obj;
+						continue;
+					}
+					handles[i++] = webhookHandle;
+				}
+
+				// Use actual count of created handles
+				size_t actual_count = i;
+
+				forward->PushCell(client->GetHandle());
+				forward->PushArray(handles.get(), static_cast<unsigned int>(actual_count));
+				forward->PushCell(static_cast<unsigned int>(actual_count));
+				forward->PushCell(value);
+				forward->Execute(nullptr);
+
+				for (i = 0; i < actual_count; i++)
+				{
+					handlesys->FreeHandle(handles[i], &sec);
+				}
+
+				forwards->ReleaseForward(forward);
+			});
+		});
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to get channel webhooks: %s", e.what());
 		return false;
 	}
 }
 
 bool DiscordChannel::SendMessage(const char* content) {
 	if (!m_client || !content) return false;
-	
+
 	try {
 		dpp::message msg(m_channel.id, content);
 		m_client->GetCluster()->message_create(msg);
@@ -845,7 +1053,7 @@ bool DiscordChannel::SendMessage(const char* content) {
 
 bool DiscordChannel::SendMessageEmbed(const char* content, const DiscordEmbed* embed) {
 	if (!m_client || !embed) return false;
-	
+
 	try {
 		dpp::message msg(m_channel.id, content ? content : "");
 		msg.add_embed(embed->GetEmbed());
@@ -860,7 +1068,7 @@ bool DiscordChannel::SendMessageEmbed(const char* content, const DiscordEmbed* e
 
 bool DiscordChannel::SendDiscordMessage(const DiscordMessage* message) {
 	if (!m_client || !message) return false;
-	
+
 	try {
 		dpp::message msg = message->GetDPPMessage();
 		msg.channel_id = m_channel.id; // Override channel ID to this channel
@@ -875,7 +1083,7 @@ bool DiscordChannel::SendDiscordMessage(const DiscordMessage* message) {
 
 bool DiscordChannel::SetRTCRegion(const char* region) {
 	if (!m_client) return false;
-	
+
 	try {
 		dpp::channel ch = m_channel;
 		if (region && strlen(region) > 0) {
@@ -883,7 +1091,7 @@ bool DiscordChannel::SetRTCRegion(const char* region) {
 		} else {
 			ch.rtc_region = "";
 		}
-		
+
 		m_client->GetCluster()->channel_edit(ch);
 		return true;
 	}
@@ -895,12 +1103,12 @@ bool DiscordChannel::SetRTCRegion(const char* region) {
 
 bool DiscordChannel::CreateForumTag(const char* name, const char* emoji, bool moderated) {
 	if (!m_client || !name) return false;
-	
+
 	try {
 		dpp::forum_tag tag;
 		tag.set_name(name);
 		tag.moderated = moderated;
-		
+
 		if (emoji && strlen(emoji) > 0) {
 			// Check if emoji is a snowflake ID (numeric) or unicode
 			if (std::all_of(emoji, emoji + strlen(emoji), ::isdigit)) {
@@ -909,9 +1117,9 @@ bool DiscordChannel::CreateForumTag(const char* name, const char* emoji, bool mo
 				tag.emoji = std::string(emoji);
 			}
 		}
-		
+
 		m_channel.available_tags.push_back(tag);
-		
+
 		m_client->GetCluster()->channel_edit(m_channel);
 		return true;
 	}
@@ -923,13 +1131,13 @@ bool DiscordChannel::CreateForumTag(const char* name, const char* emoji, bool mo
 
 bool DiscordChannel::EditForumTag(dpp::snowflake tag_id, const char* name, const char* emoji, bool moderated) {
 	if (!m_client || !name) return false;
-	
+
 	try {
 		for (auto& tag : m_channel.available_tags) {
 			if (tag.id == tag_id) {
 				tag.set_name(name);
 				tag.moderated = moderated;
-				
+
 				if (emoji && strlen(emoji) > 0) {
 					if (std::all_of(emoji, emoji + strlen(emoji), ::isdigit)) {
 						tag.emoji = dpp::snowflake(emoji);
@@ -939,12 +1147,12 @@ bool DiscordChannel::EditForumTag(dpp::snowflake tag_id, const char* name, const
 				} else {
 					tag.emoji = std::monostate{};
 				}
-				
+
 				m_client->GetCluster()->channel_edit(m_channel);
 				return true;
 			}
 		}
-		
+
 		smutils->LogError(myself, "Forum tag with ID %llu not found", tag_id);
 		return false;
 	}
@@ -956,18 +1164,18 @@ bool DiscordChannel::EditForumTag(dpp::snowflake tag_id, const char* name, const
 
 bool DiscordChannel::DeleteForumTag(dpp::snowflake tag_id) {
 	if (!m_client) return false;
-	
+
 	try {
 		auto& tags = m_channel.available_tags;
 		for (auto it = tags.begin(); it != tags.end(); ++it) {
 			if (it->id == tag_id) {
 				tags.erase(it);
-				
+
 				m_client->GetCluster()->channel_edit(m_channel);
 				return true;
 			}
 		}
-		
+
 		smutils->LogError(myself, "Forum tag with ID %llu not found", tag_id);
 		return false;
 	}
@@ -979,10 +1187,10 @@ bool DiscordChannel::DeleteForumTag(dpp::snowflake tag_id) {
 
 bool DiscordChannel::CreateForumThread(const char* name, const char* message, const std::vector<dpp::snowflake>& tag_ids, int auto_archive, int rate_limit) {
 	if (!m_client || !name || !message) return false;
-	
+
 	try {
 		dpp::message starter_message(m_channel.id, message);
-		
+
 		dpp::auto_archive_duration_t archive_duration;
 		switch (auto_archive) {
 			case 60: archive_duration = dpp::arc_1_hour; break;
@@ -991,13 +1199,13 @@ bool DiscordChannel::CreateForumThread(const char* name, const char* message, co
 			case 10080: archive_duration = dpp::arc_1_week; break;
 			default: archive_duration = dpp::arc_1_day; break;
 		}
-		
+
 		m_client->GetCluster()->thread_create_in_forum(name, m_channel.id, starter_message, archive_duration, rate_limit, tag_ids, [this](const dpp::confirmation_callback_t& callback) {
 			if (callback.is_error()) {
 				smutils->LogError(myself, "Failed to create forum thread: %s", callback.get_error().message.c_str());
 			}
 		});
-		
+
 		return true;
 	}
 	catch (const std::exception& e) {
@@ -1008,11 +1216,11 @@ bool DiscordChannel::CreateForumThread(const char* name, const char* message, co
 
 bool DiscordChannel::CreateForumThreadEmbed(const char* name, const char* message, const DiscordEmbed* embed, const std::vector<dpp::snowflake>& tag_ids, int auto_archive, int rate_limit) {
 	if (!m_client || !name || !message || !embed) return false;
-	
+
 	try {
 		dpp::message starter_message(m_channel.id, message);
 		starter_message.add_embed(embed->GetEmbed());
-		
+
 		dpp::auto_archive_duration_t archive_duration;
 		switch (auto_archive) {
 			case 60: archive_duration = dpp::arc_1_hour; break;
@@ -1021,13 +1229,13 @@ bool DiscordChannel::CreateForumThreadEmbed(const char* name, const char* messag
 			case 10080: archive_duration = dpp::arc_1_week; break;
 			default: archive_duration = dpp::arc_1_day; break;
 		}
-		
+
 		m_client->GetCluster()->thread_create_in_forum(name, m_channel.id, starter_message, archive_duration, rate_limit, tag_ids, [this](const dpp::confirmation_callback_t& callback) {
 			if (callback.is_error()) {
 				smutils->LogError(myself, "Failed to create forum thread with embed: %s", callback.get_error().message.c_str());
 			}
 		});
-		
+
 		return true;
 	}
 	catch (const std::exception& e) {
@@ -1038,15 +1246,20 @@ bool DiscordChannel::CreateForumThreadEmbed(const char* name, const char* messag
 
 DiscordClient::DiscordClient(const char* token, uint32_t intents) : m_discord_handle(0)
 {
-	m_cluster = std::make_unique<dpp::cluster>(token, intents);
+	try {
+		m_cluster = std::make_unique<dpp::cluster>(token, intents);
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to create Discord cluster: %s", e.what());
+	}
 }
 
 DiscordClient::~DiscordClient()
 {
 	Stop();
-	
+
 	// Release forwards
 	if (m_readyCallback.forward) forwards->ReleaseForward(m_readyCallback.forward);
+	if (m_resumedCallback.forward) forwards->ReleaseForward(m_resumedCallback.forward);
 	if (m_messageCallback.forward) forwards->ReleaseForward(m_messageCallback.forward);
 	if (m_logCallback.forward) forwards->ReleaseForward(m_logCallback.forward);
 	if (m_slashCommandCallback.forward) forwards->ReleaseForward(m_slashCommandCallback.forward);
@@ -1065,50 +1278,55 @@ bool DiscordClient::Initialize()
 	}
 }
 
-void DiscordClient::RunBot()
-{
+void DiscordClient::RunBot() {
 	try {
-		m_cluster->start();
-	}
-	catch (const std::exception& e) {
+		if (m_cluster) {
+			m_cluster->start();
+		}
+	} catch (const std::exception &e) {
 		smutils->LogError(myself, "Failed to run Discord bot: %s", e.what());
 	}
 }
 
-void DiscordClient::Start()
-{
-	if (!m_cluster || IsRunning()) {
+void DiscordClient::Start() {
+	if (!m_cluster || (m_thread && m_thread->joinable())) {
 		return;
 	}
+
 	m_thread = std::make_unique<std::thread>(&DiscordClient::RunBot, this);
 }
 
-void DiscordClient::Stop()
-{
-	if (!m_cluster || !IsRunning()) {
+void DiscordClient::Stop() {
+	if (!m_cluster || !m_thread || !m_thread->joinable()) {
 		return;
 	}
 
 	try {
+		// Send close packet if bot is still connected (graceful shutdown)
+		if (IsRunning()) {
+			SendClosePacket();
+		}
+		// Always call shutdown to stop the blocking m_cluster->start() call
 		m_cluster->shutdown();
-
-		if (m_thread && m_thread->joinable()) {
-			m_thread->join();
-		}
-
-		m_thread.reset();
-		m_cluster.reset();
-
-		// Manual handle
-		/*
-		Handle_t handle = GetHandle();
-		if (handle) {
-			handlesys->FreeHandle(handle, nullptr);
-		}
-		*/
+	} catch (const std::exception &e) {
+		smutils->LogError(myself, "Error during shutdown: %s", e.what());
 	}
-	catch (const std::exception& e) {
-		smutils->LogError(myself, "Error during Discord bot shutdown: %s", e.what());
+
+	// Wait for thread to finish
+	try {
+		m_thread->join();
+	} catch (const std::exception &e) {
+		smutils->LogError(myself, "Error joining thread: %s", e.what());
+		if (m_thread->joinable()) {
+			m_thread->detach();
+		}
+	}
+
+	m_thread.reset();
+
+	if (m_shutdownCallback.forward && m_shutdownCallback.forward->GetFunctionCount()) {
+		m_shutdownCallback.forward->PushCell(m_shutdownCallback.data);
+		m_shutdownCallback.forward->Execute(nullptr);
 	}
 }
 
@@ -1257,15 +1475,56 @@ void DiscordClient::SetupEventHandlers()
 	}
 
 	// If the callback is not registered, return! (do not push any tasks to the queue)
-
 	m_cluster->on_ready([this](const dpp::ready_t& event) {
-		UpdateBotInfo();
 		if (!m_readyCallback.forward || !m_readyCallback.forward->GetFunctionCount()) return;
 
-		g_TaskQueue.Push([this]() {
+		std::string session_id = event.session_id;
+		uint32_t shard_id = event.shard_id;
+		uint32_t guild_count = event.guild_count;
+		std::vector<dpp::snowflake> guilds = event.guilds;
+
+		g_TaskQueue.Push([this, session_id, shard_id, guild_count, guilds]() {
+			std::vector<std::string> guild_id_strings;
+			guild_id_strings.reserve(guilds.size());
+			for (const auto& guild_id : guilds) {
+				guild_id_strings.push_back(guild_id.str());
+			}
+
+			// Prepare cell array to store string offsets
+			// Each guild ID string needs to be pushed separately
+			const size_t max_guilds = guild_id_strings.size();
+
 			m_readyCallback.forward->PushCell(m_discord_handle);
+			m_readyCallback.forward->PushString(session_id.c_str());
+			m_readyCallback.forward->PushCell(shard_id);
+			m_readyCallback.forward->PushCell(guild_count);
+
+			// Push guild IDs as a formatted string (comma-separated for easy parsing)
+			// Example: "748281683958038619,748281683958038620,748281683958038621"
+			std::string guild_ids_str;
+			for (size_t i = 0; i < guild_id_strings.size(); ++i) {
+				if (i > 0) guild_ids_str += ",";
+				guild_ids_str += guild_id_strings[i];
+			}
+			m_readyCallback.forward->PushString(guild_ids_str.c_str());
+			m_readyCallback.forward->PushCell(max_guilds);
 			m_readyCallback.forward->PushCell(m_readyCallback.data);
 			m_readyCallback.forward->Execute(nullptr);
+		});
+	});
+
+	m_cluster->on_resumed([this](const dpp::resumed_t& event) {
+		if (!m_resumedCallback.forward || !m_resumedCallback.forward->GetFunctionCount()) return;
+
+		std::string session_id = event.session_id;
+		uint32_t shard_id = event.shard_id;
+
+		g_TaskQueue.Push([this, session_id, shard_id]() {
+			m_resumedCallback.forward->PushCell(m_discord_handle);
+			m_resumedCallback.forward->PushString(session_id.c_str());
+			m_resumedCallback.forward->PushCell(shard_id);
+			m_resumedCallback.forward->PushCell(m_resumedCallback.data);
+			m_resumedCallback.forward->Execute(nullptr);
 		});
 	});
 
@@ -1287,7 +1546,9 @@ void DiscordClient::SetupEventHandlers()
 				m_messageCallback.forward->PushCell(m_messageCallback.data);
 				m_messageCallback.forward->Execute(nullptr);
 
-				handlesys->FreeHandle(messageHandle, &sec);
+				if (m_messageCallback.autoFreeHandles) {
+					handlesys->FreeHandle(messageHandle, &sec);
+				}
 			} else {
 				delete message;
 			}
@@ -1297,7 +1558,10 @@ void DiscordClient::SetupEventHandlers()
 	m_cluster->on_log([this](const dpp::log_t& event) {
 		if (!m_logCallback.forward || !m_logCallback.forward->GetFunctionCount()) return;
 
-		g_TaskQueue.Push([this, severity = event.severity, message = event.message]() {
+		std::string message = event.message;
+		dpp::loglevel severity = event.severity;
+
+		g_TaskQueue.Push([this, severity, message]() {
 			m_logCallback.forward->PushCell(m_discord_handle);
 			m_logCallback.forward->PushCell(severity);
 			m_logCallback.forward->PushString(message.c_str());
@@ -1325,7 +1589,9 @@ void DiscordClient::SetupEventHandlers()
 				m_slashCommandCallback.forward->PushCell(m_slashCommandCallback.data);
 				m_slashCommandCallback.forward->Execute(nullptr);
 
-				handlesys->FreeHandle(interactionHandle, &sec);
+				if (m_slashCommandCallback.autoFreeHandles) {
+					handlesys->FreeHandle(interactionHandle, &sec);
+				}
 			} else {
 				delete interaction;
 			}
@@ -1359,7 +1625,9 @@ void DiscordClient::SetupEventHandlers()
 					m_autocompleteCallback.forward->Execute(nullptr);
 				}
 
-				handlesys->FreeHandle(interactionHandle, &sec);
+				if (m_autocompleteCallback.autoFreeHandles) {
+					handlesys->FreeHandle(interactionHandle, &sec);
+				}
 			} else {
 				delete interaction;
 			}
@@ -1370,16 +1638,17 @@ void DiscordClient::SetupEventHandlers()
 static cell_t discord_SetReadyCallback(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
 	if (!callback) {
-		pContext->ReportError("Invalid callback function");
+		pContext->ReportError("Invalid ready callback function");
 		return 0;
 	}
 
-	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_Cell);
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 7, nullptr, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Any);
 	if (!forward) {
-		pContext->ReportError("Could not create forward");
+		pContext->ReportError("Could not create ready forward");
 		return 0;
 	}
 
@@ -1388,40 +1657,64 @@ static cell_t discord_SetReadyCallback(IPluginContext* pContext, const cell_t* p
 	return 1;
 }
 
-static cell_t discord_SetMessageCallback(IPluginContext* pContext, const cell_t* params)
+static cell_t discord_SetResumedCallback(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
 	if (!callback) {
-		pContext->ReportError("Invalid callback function");
+		pContext->ReportError("Invalid resumed callback function");
 		return 0;
 	}
 
-	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Cell);
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_String, Param_Cell, Param_Any);
 	if (!forward) {
-		pContext->ReportError("Could not create forward");
+		pContext->ReportError("Could not create resumed forward");
 		return 0;
 	}
 
 	forward->AddFunction(callback);
-	discord->SetMessageCallback(forward, params[3]);
+	discord->SetResumedCallback(forward, params[3]);
+	return 1;
+}
+
+static cell_t discord_SetMessageCallback(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
+	if (!callback) {
+		pContext->ReportError("Invalid message callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
+	if (!forward) {
+		pContext->ReportError("Could not create message forward");
+		return 0;
+	}
+
+	forward->AddFunction(callback);
+	discord->SetMessageCallback(forward, params[3], params[4]);
 	return 1;
 }
 
 static cell_t discord_SetLogCallback(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
 	if (!callback) {
-		pContext->ReportError("Invalid callback function");
+		pContext->ReportError("Invalid log callback function");
 		return 0;
 	}
 
-	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_Cell);
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_Any);
 	if (!forward) {
-		pContext->ReportError("Could not create forward");
+		pContext->ReportError("Could not create log forward");
 		return 0;
 	}
 
@@ -1433,42 +1726,67 @@ static cell_t discord_SetLogCallback(IPluginContext* pContext, const cell_t* par
 static cell_t discord_SetSlashCommandCallback(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
 	if (!callback) {
-		pContext->ReportError("Invalid callback function");
+		pContext->ReportError("Invalid slash command callback function");
 		return 0;
 	}
 
-	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Cell);
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
 	if (!forward) {
-		pContext->ReportError("Could not create forward");
+		pContext->ReportError("Could not create slash command forward");
 		return 0;
 	}
 
 	forward->AddFunction(callback);
-	discord->SetSlashCommandCallback(forward, params[3]);
+	discord->SetSlashCommandCallback(forward, params[3], params[4]);
 	return 1;
 }
 
 static cell_t discord_SetAutocompleteCallback(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
 	if (!callback) {
-		pContext->ReportError("Invalid callback function");
+		pContext->ReportError("Invalid autocomplete callback function");
 		return 0;
 	}
 
-	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 6, nullptr, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 6, nullptr, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Any);
 	if (!forward) {
-		pContext->ReportError("Could not create forward");
+		pContext->ReportError("Could not create autocomplete forward");
 		return 0;
 	}
 
 	forward->AddFunction(callback);
-	discord->SetAutocompleteCallback(forward, params[3]);
+	discord->SetAutocompleteCallback(forward, params[3], params[4]);
+	return 1;
+}
+
+static cell_t discord_SetShutdownCallback(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
+	if (!callback) {
+		pContext->ReportError("Invalid shutdown callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 1, nullptr, Param_Any);
+	if (!forward) {
+		pContext->ReportError("Failed to create shutdown forward");
+		return 0;
+	}
+
+	forward->AddFunction(callback);
+	discord->SetShutdownCallback(forward, params[3]);
+
 	return 1;
 }
 
@@ -1503,6 +1821,7 @@ static cell_t discord_CreateClient(IPluginContext* pContext, const cell_t* param
 static cell_t discord_Start(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	discord->Start();
 	return 1;
@@ -1511,6 +1830,7 @@ static cell_t discord_Start(IPluginContext* pContext, const cell_t* params)
 static cell_t discord_Stop(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	discord->Stop();
 	return 1;
@@ -1519,19 +1839,21 @@ static cell_t discord_Stop(IPluginContext* pContext, const cell_t* params)
 static cell_t discord_GetBotId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
-	const char* botId = discord->GetBotId();
-	if (!botId) {
+	std::string botId = discord->GetBotId();
+	if (botId.empty()) {
 		return 0;
 	}
 
-	pContext->StringToLocal(params[2], params[3], botId);
+	pContext->StringToLocal(params[2], params[3], botId.c_str());
 	return 1;
 }
 
 static cell_t discord_GetBotName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	const char* botName = discord->GetBotName();
 	if (!botName) {
@@ -1545,26 +1867,37 @@ static cell_t discord_GetBotName(IPluginContext* pContext, const cell_t* params)
 static cell_t discord_GetBotDiscriminator(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
-	
+	if (!discord) return 0;
+
 	return discord->GetBotDiscriminator();
 }
 
 static cell_t discord_GetBotAvatarUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
-	const char* avatarUrl = discord->GetBotAvatarUrl();
-	if (!avatarUrl) {
+	std::string avatarUrl = discord->GetBotAvatarUrl();
+	if (avatarUrl.empty()) {
 		return 0;
 	}
 
-	pContext->StringToLocal(params[2], params[3], avatarUrl);
+	pContext->StringToLocal(params[2], params[3], avatarUrl.c_str());
 	return 1;
+}
+
+static cell_t discord_GetUptime(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	return static_cast<cell_t>(discord->GetUptime());
 }
 
 static cell_t discord_SetPresence(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* status_text;
 	pContext->LocalToString(params[4], &status_text);
@@ -1573,111 +1906,10 @@ static cell_t discord_SetPresence(IPluginContext* pContext, const cell_t* params
 	return discord->SetPresence(presence);
 }
 
-static cell_t discord_GetChannelWebhooks(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
-
-	char* channelId;
-	pContext->LocalToString(params[2], &channelId);
-
-	IPluginFunction *callback = pContext->GetFunctionById(params[3]);
-	if (!callback) {
-		pContext->ReportError("Invalid callback function");
-		return 0;
-	}
-
-	try {
-		dpp::snowflake channelFlake = std::stoull(channelId);
-
-		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
-		if (!forward || !forward->AddFunction(callback))
-		{
-			pContext->ReportError("Could not create forward.");
-			return 0;
-		}
-
-		cell_t data = params[4];
-		return DiscordWebhook::GetChannelWebhooks(discord, channelFlake, forward, data);
-	}
-	catch (const std::exception& e) {
-		pContext->ReportError("Invalid channel ID format: %s", channelId);
-		return 0;
-	}
-}
-
-static cell_t discord_CreateWebhook(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
-
-	char* channelId;
-	pContext->LocalToString(params[2], &channelId);
-
-	char* name;
-	pContext->LocalToString(params[3], &name);
-
-	IPluginFunction *callback = pContext->GetFunctionById(params[4]);
-	if (!callback) {
-		pContext->ReportError("Invalid callback function");
-		return 0;
-	}
-
-	try {
-		dpp::snowflake channelFlake = std::stoull(channelId);
-		dpp::webhook webhook;
-		webhook.name = name;
-		webhook.channel_id = channelFlake;
-
-		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
-		if (!forward || !forward->AddFunction(callback))
-		{
-			pContext->ReportError("Could not create forward.");
-			return 0;
-		}
-
-		cell_t data = params[5];
-		return DiscordWebhook::CreateWebhook(discord, webhook, forward, data);
-	}
-	catch (const std::exception& e) {
-		pContext->ReportError("Invalid channel ID format: %s", channelId);
-		return 0;
-	}
-}
-
-static cell_t discord_GetWebhook(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
-
-	char* webhookId;
-	pContext->LocalToString(params[2], &webhookId);
-
-	IPluginFunction *callback = pContext->GetFunctionById(params[3]);
-	if (!callback) {
-		pContext->ReportError("Invalid callback function");
-		return 0;
-	}
-
-	try {
-		dpp::snowflake webhookFlake = std::stoull(webhookId);
-
-		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
-		if (!forward || !forward->AddFunction(callback))
-		{
-			pContext->ReportError("Could not create forward.");
-			return 0;
-		}
-
-		cell_t data = params[4];
-		return DiscordWebhook::GetWebhook(discord, webhookFlake, forward, data);
-	}
-	catch (const std::exception& e) {
-		pContext->ReportError("Invalid webhook ID format: %s", webhookId);
-		return 0;
-	}
-}
-
 static cell_t discord_SendMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -1731,6 +1963,7 @@ static cell_t discord_SendMessage(IPluginContext* pContext, const cell_t* params
 static cell_t discord_SendMessageEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -1772,6 +2005,7 @@ static cell_t discord_SendMessageEmbed(IPluginContext* pContext, const cell_t* p
 	}
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[4]);
+	if (!embed) return 0;
 
 	try {
 		dpp::snowflake channel = std::stoull(channelId);
@@ -1786,8 +2020,10 @@ static cell_t discord_SendMessageEmbed(IPluginContext* pContext, const cell_t* p
 static cell_t discord_SendDiscordMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	DiscordMessage* message = GetMessagePointer(pContext, params[2]);
+	if (!message) return 0;
 
 	return discord->SendDiscordMessage(message);
 }
@@ -1795,11 +2031,13 @@ static cell_t discord_SendDiscordMessage(IPluginContext* pContext, const cell_t*
 static cell_t discord_SendDiscordMessageToChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
 
 	DiscordMessage* message = GetMessagePointer(pContext, params[3]);
+	if (!message) return 0;
 
 	try {
 		dpp::snowflake channel = std::stoull(channelId);
@@ -1814,6 +2052,7 @@ static cell_t discord_SendDiscordMessageToChannel(IPluginContext* pContext, cons
 static cell_t discord_IsRunning(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	return discord->IsRunning();
 }
@@ -1839,6 +2078,7 @@ static cell_t embed_CreateEmbed(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetTitle(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* title;
 	pContext->LocalToString(params[2], &title);
@@ -1850,6 +2090,7 @@ static cell_t embed_SetTitle(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetDescription(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* desc;
 	pContext->LocalToString(params[2], &desc);
@@ -1861,6 +2102,7 @@ static cell_t embed_SetDescription(IPluginContext* pContext, const cell_t* param
 static cell_t embed_SetColor(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	embed->SetColor(params[2]);
 	return 1;
@@ -1869,6 +2111,7 @@ static cell_t embed_SetColor(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* url;
 	pContext->LocalToString(params[2], &url);
@@ -1880,6 +2123,7 @@ static cell_t embed_SetUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetAuthor(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -1897,6 +2141,7 @@ static cell_t embed_SetAuthor(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetFooter(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* text;
 	pContext->LocalToString(params[2], &text);
@@ -1911,6 +2156,7 @@ static cell_t embed_SetFooter(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_AddField(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -1927,6 +2173,7 @@ static cell_t embed_AddField(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetThumbnail(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* url;
 	pContext->LocalToString(params[2], &url);
@@ -1938,6 +2185,7 @@ static cell_t embed_SetThumbnail(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetImage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* url;
 	pContext->LocalToString(params[2], &url);
@@ -1949,6 +2197,7 @@ static cell_t embed_SetImage(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetVideo(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* url;
 	pContext->LocalToString(params[2], &url);
@@ -1959,15 +2208,16 @@ static cell_t embed_SetVideo(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetProvider(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	char* name;
 	char* url = nullptr;
 	pContext->LocalToString(params[2], &name);
-	
+
 	if (params[0] >= 3) {
 		pContext->LocalToString(params[3], &url);
 	}
-	
+
 	embed->SetProvider(name, url ? url : "");
 	return 1;
 }
@@ -1975,6 +2225,7 @@ static cell_t embed_SetProvider(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_SetTimestamp(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	embed->SetTimestamp(params[2]);
 	return 1;
@@ -1983,6 +2234,7 @@ static cell_t embed_SetTimestamp(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetTitle(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string title = embed->GetTitle();
 	pContext->StringToLocal(params[2], params[3], title.c_str());
@@ -1992,6 +2244,7 @@ static cell_t embed_GetTitle(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetDescription(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string description = embed->GetDescription();
 	pContext->StringToLocal(params[2], params[3], description.c_str());
@@ -2001,6 +2254,7 @@ static cell_t embed_GetDescription(IPluginContext* pContext, const cell_t* param
 static cell_t embed_GetColor(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return static_cast<cell_t>(embed->GetColor());
 }
@@ -2008,6 +2262,7 @@ static cell_t embed_GetColor(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2017,6 +2272,7 @@ static cell_t embed_GetUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetAuthorName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string author_name = embed->GetAuthorName();
 	pContext->StringToLocal(params[2], params[3], author_name.c_str());
@@ -2026,6 +2282,7 @@ static cell_t embed_GetAuthorName(IPluginContext* pContext, const cell_t* params
 static cell_t embed_GetAuthorUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string author_url = embed->GetAuthorUrl();
 	pContext->StringToLocal(params[2], params[3], author_url.c_str());
@@ -2035,6 +2292,7 @@ static cell_t embed_GetAuthorUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetAuthorIconUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string author_icon_url = embed->GetAuthorIconUrl();
 	pContext->StringToLocal(params[2], params[3], author_icon_url.c_str());
@@ -2044,6 +2302,7 @@ static cell_t embed_GetAuthorIconUrl(IPluginContext* pContext, const cell_t* par
 static cell_t embed_GetFooterText(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string footer_text = embed->GetFooterText();
 	pContext->StringToLocal(params[2], params[3], footer_text.c_str());
@@ -2053,6 +2312,7 @@ static cell_t embed_GetFooterText(IPluginContext* pContext, const cell_t* params
 static cell_t embed_GetFooterIconUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string footer_icon_url = embed->GetFooterIconUrl();
 	pContext->StringToLocal(params[2], params[3], footer_icon_url.c_str());
@@ -2062,6 +2322,7 @@ static cell_t embed_GetFooterIconUrl(IPluginContext* pContext, const cell_t* par
 static cell_t embed_GetThumbnailUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string thumbnail_url = embed->GetThumbnailUrl();
 	pContext->StringToLocal(params[2], params[3], thumbnail_url.c_str());
@@ -2071,6 +2332,7 @@ static cell_t embed_GetThumbnailUrl(IPluginContext* pContext, const cell_t* para
 static cell_t embed_GetImageUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string image_url = embed->GetImageUrl();
 	pContext->StringToLocal(params[2], params[3], image_url.c_str());
@@ -2080,6 +2342,7 @@ static cell_t embed_GetImageUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string type = embed->GetType();
 	pContext->StringToLocal(params[2], params[3], type.c_str());
@@ -2089,6 +2352,7 @@ static cell_t embed_GetType(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetTimestamp(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return static_cast<cell_t>(embed->GetTimestamp());
 }
@@ -2096,6 +2360,7 @@ static cell_t embed_GetTimestamp(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetAuthorProxyIconUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetAuthorProxyIconUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2105,6 +2370,7 @@ static cell_t embed_GetAuthorProxyIconUrl(IPluginContext* pContext, const cell_t
 static cell_t embed_GetFooterProxyUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetFooterProxyUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2114,6 +2380,7 @@ static cell_t embed_GetFooterProxyUrl(IPluginContext* pContext, const cell_t* pa
 static cell_t embed_GetThumbnailProxyUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetThumbnailProxyUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2123,6 +2390,7 @@ static cell_t embed_GetThumbnailProxyUrl(IPluginContext* pContext, const cell_t*
 static cell_t embed_GetThumbnailWidth(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->GetThumbnailWidth();
 }
@@ -2130,6 +2398,7 @@ static cell_t embed_GetThumbnailWidth(IPluginContext* pContext, const cell_t* pa
 static cell_t embed_GetThumbnailHeight(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->GetThumbnailHeight();
 }
@@ -2137,6 +2406,7 @@ static cell_t embed_GetThumbnailHeight(IPluginContext* pContext, const cell_t* p
 static cell_t embed_GetImageProxyUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetImageProxyUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2146,6 +2416,7 @@ static cell_t embed_GetImageProxyUrl(IPluginContext* pContext, const cell_t* par
 static cell_t embed_GetImageWidth(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->GetImageWidth();
 }
@@ -2153,6 +2424,7 @@ static cell_t embed_GetImageWidth(IPluginContext* pContext, const cell_t* params
 static cell_t embed_GetImageHeight(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->GetImageHeight();
 }
@@ -2160,6 +2432,7 @@ static cell_t embed_GetImageHeight(IPluginContext* pContext, const cell_t* param
 static cell_t embed_GetVideoUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetVideoUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2169,6 +2442,7 @@ static cell_t embed_GetVideoUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetVideoProxyUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetVideoProxyUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2178,6 +2452,7 @@ static cell_t embed_GetVideoProxyUrl(IPluginContext* pContext, const cell_t* par
 static cell_t embed_GetVideoWidth(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->GetVideoWidth();
 }
@@ -2185,6 +2460,7 @@ static cell_t embed_GetVideoWidth(IPluginContext* pContext, const cell_t* params
 static cell_t embed_GetVideoHeight(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->GetVideoHeight();
 }
@@ -2192,6 +2468,7 @@ static cell_t embed_GetVideoHeight(IPluginContext* pContext, const cell_t* param
 static cell_t embed_GetProviderName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string name = embed->GetProviderName();
 	pContext->StringToLocal(params[2], params[3], name.c_str());
@@ -2201,6 +2478,7 @@ static cell_t embed_GetProviderName(IPluginContext* pContext, const cell_t* para
 static cell_t embed_GetProviderUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	std::string url = embed->GetProviderUrl();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -2210,6 +2488,7 @@ static cell_t embed_GetProviderUrl(IPluginContext* pContext, const cell_t* param
 static cell_t embed_RemoveField(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->RemoveField(params[2]);
 }
@@ -2217,6 +2496,7 @@ static cell_t embed_RemoveField(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_ClearFields(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	embed->ClearFields();
 	return 1;
@@ -2225,6 +2505,7 @@ static cell_t embed_ClearFields(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasThumbnail(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasThumbnail();
 }
@@ -2232,6 +2513,7 @@ static cell_t embed_HasThumbnail(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasImage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasImage();
 }
@@ -2239,6 +2521,7 @@ static cell_t embed_HasImage(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasVideo(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasVideo();
 }
@@ -2246,6 +2529,7 @@ static cell_t embed_HasVideo(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasProvider(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasProvider();
 }
@@ -2253,6 +2537,7 @@ static cell_t embed_HasProvider(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasAuthor(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasAuthor();
 }
@@ -2260,6 +2545,7 @@ static cell_t embed_HasAuthor(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasFooter(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasFooter();
 }
@@ -2267,6 +2553,7 @@ static cell_t embed_HasFooter(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_HasTimestamp(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return embed->HasTimestamp();
 }
@@ -2274,6 +2561,7 @@ static cell_t embed_HasTimestamp(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetFieldCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	return static_cast<cell_t>(embed->GetFieldCount());
 }
@@ -2281,6 +2569,7 @@ static cell_t embed_GetFieldCount(IPluginContext* pContext, const cell_t* params
 static cell_t embed_GetFieldName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	size_t index = static_cast<size_t>(params[2]);
 	std::string field_name = embed->GetFieldName(index);
@@ -2291,6 +2580,7 @@ static cell_t embed_GetFieldName(IPluginContext* pContext, const cell_t* params)
 static cell_t embed_GetFieldValue(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	size_t index = static_cast<size_t>(params[2]);
 	std::string field_value = embed->GetFieldValue(index);
@@ -2301,6 +2591,7 @@ static cell_t embed_GetFieldValue(IPluginContext* pContext, const cell_t* params
 static cell_t embed_GetFieldInline(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[1]);
+	if (!embed) return 0;
 
 	size_t index = static_cast<size_t>(params[2]);
 	return embed->GetFieldInline(index);
@@ -2309,6 +2600,7 @@ static cell_t embed_GetFieldInline(IPluginContext* pContext, const cell_t* param
 static cell_t user_CreateFromId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* userId;
 	pContext->LocalToString(params[2], &userId);
@@ -2326,7 +2618,7 @@ static cell_t user_CreateFromId(IPluginContext* pContext, const cell_t* params)
 		}
 
 		dpp::user* user_ptr = dpp::find_user(userFlake);
-		
+
 		if (!user_ptr) {
 			dpp::user user_obj;
 			user_obj.id = userFlake;
@@ -2415,6 +2707,7 @@ static cell_t user_CreateFromId(IPluginContext* pContext, const cell_t* params)
 static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* userId;
 	pContext->LocalToString(params[2], &userId);
@@ -2465,7 +2758,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 							callback->PushCell(handle);
 							callback->PushCell(data);
 							callback->Execute(nullptr);
-							
+
 							handlesys->FreeHandle(handle, &sec);
 						}
 						catch (const std::exception& e) {
@@ -2475,7 +2768,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 					return 1;
 				}
 			}
-			
+
 			discord->GetCluster()->guild_get_member(guildFlake, userFlake, [discord, callback, data](const dpp::confirmation_callback_t& confirmation) {
 				g_TaskQueue.Push([discord, callback, data, confirmation]() {
 					if (confirmation.is_error()) {
@@ -2505,7 +2798,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 						callback->PushCell(handle);
 						callback->PushCell(data);
 						callback->Execute(nullptr);
-						
+
 						handlesys->FreeHandle(handle, &sec);
 					}
 					catch (const std::exception& e) {
@@ -2535,7 +2828,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 						callback->PushCell(handle);
 						callback->PushCell(data);
 						callback->Execute(nullptr);
-						
+
 						handlesys->FreeHandle(handle, &sec);
 					}
 					catch (const std::exception& e) {
@@ -2553,7 +2846,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 
 					try {
 						DiscordUser* pDiscordUser = nullptr;
-						
+
 						if (std::holds_alternative<dpp::user>(confirmation.value)) {
 							dpp::user user_obj = std::get<dpp::user>(confirmation.value);
 							pDiscordUser = new DiscordUser(user_obj, discord);
@@ -2580,7 +2873,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 						callback->PushCell(handle);
 						callback->PushCell(data);
 						callback->Execute(nullptr);
-						
+
 						handlesys->FreeHandle(handle, &sec);
 					}
 					catch (const std::exception& e) {
@@ -2601,6 +2894,7 @@ static cell_t user_FetchUser(IPluginContext* pContext, const cell_t* params)
 static cell_t user_FindUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* user_id_str;
 	pContext->LocalToString(params[2], &user_id_str);
@@ -2613,7 +2907,7 @@ static cell_t user_FindUser(IPluginContext* pContext, const cell_t* params)
 	try {
 		dpp::snowflake user_id = std::stoull(user_id_str);
 		dpp::user* user_ptr = dpp::find_user(user_id);
-		
+
 		if (!user_ptr) {
 			return 0; // User not found in cache
 		}
@@ -2623,7 +2917,7 @@ static cell_t user_FindUser(IPluginContext* pContext, const cell_t* params)
 		if (guild_id_str && strlen(guild_id_str) > 0) {
 			dpp::snowflake guild_id = std::stoull(guild_id_str);
 			dpp::guild* guild_ptr = dpp::find_guild(guild_id);
-			
+
 			if (guild_ptr) {
 				auto member_it = guild_ptr->members.find(user_id);
 				if (member_it != guild_ptr->members.end()) {
@@ -2667,10 +2961,11 @@ static cell_t user_FindUser(IPluginContext* pContext, const cell_t* params)
 static cell_t message_FetchMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* messageId;
 	pContext->LocalToString(params[2], &messageId);
-	
+
 	char* channelId;
 	pContext->LocalToString(params[3], &channelId);
 
@@ -2711,7 +3006,7 @@ static cell_t message_FetchMessage(IPluginContext* pContext, const cell_t* param
 					callback->PushCell(handle);
 					callback->PushCell(data);
 					callback->Execute(nullptr);
-					
+
 					handlesys->FreeHandle(handle, &sec);
 				}
 				catch (const std::exception& e) {
@@ -2731,6 +3026,7 @@ static cell_t message_FetchMessage(IPluginContext* pContext, const cell_t* param
 static cell_t channel_FetchChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -2767,7 +3063,7 @@ static cell_t channel_FetchChannel(IPluginContext* pContext, const cell_t* param
 					callback->PushCell(handle);
 					callback->PushCell(data);
 					callback->Execute(nullptr);
-					
+
 					handlesys->FreeHandle(handle, &sec);
 				}
 				catch (const std::exception& e) {
@@ -2802,7 +3098,7 @@ static cell_t channel_FetchChannel(IPluginContext* pContext, const cell_t* param
 					callback->PushCell(handle);
 					callback->PushCell(data);
 					callback->Execute(nullptr);
-					
+
 					handlesys->FreeHandle(handle, &sec);
 				}
 				catch (const std::exception& e) {
@@ -2822,6 +3118,7 @@ static cell_t channel_FetchChannel(IPluginContext* pContext, const cell_t* param
 static cell_t channel_FindChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channel_id_str;
 	pContext->LocalToString(params[2], &channel_id_str);
@@ -2829,7 +3126,7 @@ static cell_t channel_FindChannel(IPluginContext* pContext, const cell_t* params
 	try {
 		dpp::snowflake channel_id = std::stoull(channel_id_str);
 		dpp::channel* channel_ptr = dpp::find_channel(channel_id);
-		
+
 		if (!channel_ptr) {
 			return 0; // Channel not found in cache
 		}
@@ -2857,6 +3154,7 @@ static cell_t channel_FindChannel(IPluginContext* pContext, const cell_t* params
 static cell_t message_CreateFromId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* messageId;
 	pContext->LocalToString(params[2], &messageId);
@@ -2895,6 +3193,7 @@ static cell_t message_CreateFromId(IPluginContext* pContext, const cell_t* param
 static cell_t message_CreateEmpty(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	DiscordMessage* pDiscordMessage = new DiscordMessage(discord);
 
@@ -2914,6 +3213,7 @@ static cell_t message_CreateEmpty(IPluginContext* pContext, const cell_t* params
 static cell_t message_CreateWithContent(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -2936,6 +3236,7 @@ static cell_t message_CreateWithContent(IPluginContext* pContext, const cell_t* 
 static cell_t message_CreateWithChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -2968,8 +3269,10 @@ static cell_t message_CreateWithChannel(IPluginContext* pContext, const cell_t* 
 static cell_t message_CreateWithEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[2]);
+	if (!embed) return 0;
 
 	DiscordMessage* pDiscordMessage = new DiscordMessage(embed, discord);
 
@@ -2989,11 +3292,13 @@ static cell_t message_CreateWithEmbed(IPluginContext* pContext, const cell_t* pa
 static cell_t message_CreateWithChannelEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	try {
 		dpp::snowflake channelFlake = std::stoull(channelId);
@@ -3020,14 +3325,47 @@ static cell_t message_CreateWithChannelEmbed(IPluginContext* pContext, const cel
 static cell_t user_GetId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->GetId().c_str());
+	return 1;
+}
+
+static cell_t user_GetClient(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
+
+	DiscordClient* client = user->GetClient();
+
+	if (!client) {
+		return 0;
+	}
+
+	return client->GetHandle();
+}
+
+static cell_t user_GetGuildId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
+
+	dpp::snowflake guild_id = user->GetGuildId();
+
+	if (guild_id == 0) {
+		return 0;
+	}
+
+	char guildIdStr[21];
+	snprintf(guildIdStr, sizeof(guildIdStr), "%" PRIu64, static_cast<unsigned long long>(guild_id));
+	pContext->StringToLocal(params[2], params[3], guildIdStr);
 	return 1;
 }
 
 static cell_t user_GetUserName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->GetUserName());
 	return 1;
@@ -3036,9 +3374,7 @@ static cell_t user_GetUserName(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetDiscriminator(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
-	if (!user) {
-		return 0;
-	}
+	if (!user) return 0;
 
 	return user->GetDiscriminator();
 }
@@ -3046,6 +3382,7 @@ static cell_t user_GetDiscriminator(IPluginContext* pContext, const cell_t* para
 static cell_t user_GetGlobalName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->GetGlobalName());
 	return 1;
@@ -3054,6 +3391,7 @@ static cell_t user_GetGlobalName(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetAvatarUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[3], params[4], user->GetAvatarUrl(params[2]).c_str());
 	return 1;
@@ -3062,6 +3400,7 @@ static cell_t user_GetAvatarUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetDefaultAvatarUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->GetDefaultAvatarUrl().c_str());
 	return 1;
@@ -3070,6 +3409,7 @@ static cell_t user_GetDefaultAvatarUrl(IPluginContext* pContext, const cell_t* p
 static cell_t user_GetAvatarDecorationUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[3], params[4], user->GetAvatarDecorationUrl(params[2]).c_str());
 	return 1;
@@ -3078,6 +3418,7 @@ static cell_t user_GetAvatarDecorationUrl(IPluginContext* pContext, const cell_t
 static cell_t user_GetMention(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->GetMention().c_str());
 	return 1;
@@ -3086,6 +3427,7 @@ static cell_t user_GetMention(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->GetUrl().c_str());
 	return 1;
@@ -3094,6 +3436,7 @@ static cell_t user_GetUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetFormattedUsername(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	pContext->StringToLocal(params[2], params[3], user->FormatUsername().c_str());
 	return 1;
@@ -3102,6 +3445,7 @@ static cell_t user_GetFormattedUsername(IPluginContext* pContext, const cell_t* 
 static cell_t user_GetFlags(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->GetFlags();
 }
@@ -3109,167 +3453,15 @@ static cell_t user_GetFlags(IPluginContext* pContext, const cell_t* params)
 static cell_t user_HasFlag(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->HasFlag(static_cast<dpp::user_flags>(params[2]));
-}
-
-static cell_t user_IsSystem(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsSystem();
-}
-
-static cell_t user_IsMfaEnabled(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsMfaEnabled();
-}
-
-static cell_t user_IsVerified(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsVerified();
-}
-
-static cell_t user_HasNitroFull(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->HasNitroFull();
-}
-
-static cell_t user_HasNitroClassic(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->HasNitroClassic();
-}
-
-static cell_t user_HasNitroBasic(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->HasNitroBasic();
-}
-
-static cell_t user_IsDiscordEmployee(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsDiscordEmployee();
-}
-
-static cell_t user_IsPartneredOwner(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsPartneredOwner();
-}
-
-static cell_t user_HasHypesquadEvents(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->HasHypesquadEvents();
-}
-
-static cell_t user_IsBughunter1(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsBughunter1();
-}
-
-static cell_t user_IsHouseBravery(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsHouseBravery();
-}
-
-static cell_t user_IsHouseBrilliance(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsHouseBrilliance();
-}
-
-static cell_t user_IsHouseBalance(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsHouseBalance();
-}
-
-static cell_t user_IsEarlySupporter(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsEarlySupporter();
-}
-
-static cell_t user_IsTeamUser(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsTeamUser();
-}
-
-static cell_t user_IsBughunter2(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsBughunter2();
-}
-
-static cell_t user_IsVerifiedBot(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsVerifiedBot();
-}
-
-static cell_t user_IsVerifiedBotDev(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsVerifiedBotDev();
-}
-
-static cell_t user_IsCertifiedModerator(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsCertifiedModerator();
-}
-
-static cell_t user_IsBotHttpInteractions(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsBotHttpInteractions();
-}
-
-static cell_t user_HasAnimatedIcon(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->HasAnimatedIcon();
-}
-
-static cell_t user_IsActiveDeveloper(IPluginContext* pContext, const cell_t* params)
-{
-	DiscordUser* user = GetUserPointer(pContext, params[1]);
-
-	return user->IsActiveDeveloper();
 }
 
 static cell_t user_IsBot(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->IsBot();
 }
@@ -3277,6 +3469,7 @@ static cell_t user_IsBot(IPluginContext* pContext, const cell_t* params)
 static cell_t user_HasGuildMember(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->HasGuildMember();
 }
@@ -3284,6 +3477,7 @@ static cell_t user_HasGuildMember(IPluginContext* pContext, const cell_t* params
 static cell_t user_GetNickName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	std::string nickname = user->GetNickName();
 	pContext->StringToLocal(params[2], params[3], nickname.c_str());
@@ -3293,6 +3487,7 @@ static cell_t user_GetNickName(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetJoinedAt(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return static_cast<cell_t>(user->GetJoinedAt());
 }
@@ -3300,6 +3495,7 @@ static cell_t user_GetJoinedAt(IPluginContext* pContext, const cell_t* params)
 static cell_t user_IsPending(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->IsPending();
 }
@@ -3307,6 +3503,7 @@ static cell_t user_IsPending(IPluginContext* pContext, const cell_t* params)
 static cell_t user_HasPermission(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* permission;
 	pContext->LocalToString(params[2], &permission);
@@ -3316,6 +3513,7 @@ static cell_t user_HasPermission(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetPermissions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char permStr[21];
 	snprintf(permStr, sizeof(permStr), "%" PRIu64, user->GetPermissions());
@@ -3326,10 +3524,11 @@ static cell_t user_GetPermissions(IPluginContext* pContext, const cell_t* params
 static cell_t user_HasPermissionInChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
-	
+
 	char* permission;
 	pContext->LocalToString(params[3], &permission);
 
@@ -3346,6 +3545,7 @@ static cell_t user_HasPermissionInChannel(IPluginContext* pContext, const cell_t
 static cell_t user_GetPermissionsInChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -3366,26 +3566,28 @@ static cell_t user_GetPermissionsInChannel(IPluginContext* pContext, const cell_
 static cell_t user_GetRoles(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	std::vector<dpp::snowflake> roles = user->GetRoles();
 	cell_t maxSize = params[3];
 	cell_t actualSize = (static_cast<cell_t>(roles.size()) < maxSize) ? static_cast<cell_t>(roles.size()) : maxSize;
-	
+
 	cell_t* rolesArray;
 	pContext->LocalToPhysAddr(params[2], &rolesArray);
-	
+
 	for (cell_t i = 0; i < actualSize; i++) {
 		char roleStr[21];
 		snprintf(roleStr, sizeof(roleStr), "%" PRIu64, static_cast<unsigned long long>(roles[i]));
 		pContext->StringToLocalUTF8(rolesArray[i], 21, roleStr, nullptr);
 	}
-	
+
 	return actualSize;
 }
 
 static cell_t user_HasRole(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* roleId;
 	pContext->LocalToString(params[2], &roleId);
@@ -3403,6 +3605,7 @@ static cell_t user_HasRole(IPluginContext* pContext, const cell_t* params)
 static cell_t user_HasAnyRole(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	cell_t* roleIds;
 	pContext->LocalToPhysAddr(params[2], &roleIds);
@@ -3413,9 +3616,10 @@ static cell_t user_HasAnyRole(IPluginContext* pContext, const cell_t* params)
 	}
 
 	std::vector<dpp::snowflake> roles;
-	
+
 	for (cell_t i = 0; i < roleCount; i++) {
 		char* roleIdStr;
+
 		pContext->LocalToString(roleIds[i], &roleIdStr);
 		try {
 			dpp::snowflake roleId = std::stoull(roleIdStr);
@@ -3437,6 +3641,7 @@ static cell_t user_HasAnyRole(IPluginContext* pContext, const cell_t* params)
 static cell_t user_HasAllRoles(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	cell_t* roleIds;
 	pContext->LocalToPhysAddr(params[2], &roleIds);
@@ -3447,17 +3652,22 @@ static cell_t user_HasAllRoles(IPluginContext* pContext, const cell_t* params)
 	}
 
 	std::vector<dpp::snowflake> roles;
-	
-	try {
-		for (cell_t i = 0; i < roleCount; i++) {
-			char* roleIdStr;
-			pContext->LocalToString(roleIds[i], &roleIdStr);
+
+	for (cell_t i = 0; i < roleCount; i++) {
+		char* roleIdStr;
+
+		pContext->LocalToString(roleIds[i], &roleIdStr);
+		try {
 			dpp::snowflake roleId = std::stoull(roleIdStr);
 			roles.push_back(roleId);
 		}
+		catch (const std::exception& e) {
+			smutils->LogMessage(myself, "Skipping invalid role ID: %s", roleIdStr);
+			continue;
+		}
 	}
-	catch (const std::exception& e) {
-		pContext->ReportError("Invalid role ID format in array");
+
+	if (roles.empty()) {
 		return 0;
 	}
 
@@ -3467,6 +3677,7 @@ static cell_t user_HasAllRoles(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetHighestRole(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	dpp::snowflake highest = user->GetHighestRole();
 	char roleStr[21];
@@ -3478,6 +3689,7 @@ static cell_t user_GetHighestRole(IPluginContext* pContext, const cell_t* params
 static cell_t user_GetRoleName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* roleId;
 	pContext->LocalToString(params[2], &roleId);
@@ -3497,24 +3709,26 @@ static cell_t user_GetRoleName(IPluginContext* pContext, const cell_t* params)
 static cell_t user_GetRoleNames(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	std::vector<std::string> roleNames = user->GetRoleNames();
 	cell_t maxSize = params[3];
 	cell_t actualSize = (static_cast<cell_t>(roleNames.size()) < maxSize) ? static_cast<cell_t>(roleNames.size()) : maxSize;
-	
+
 	cell_t* namesArray;
 	pContext->LocalToPhysAddr(params[2], &namesArray);
-	
+
 	for (cell_t i = 0; i < actualSize; i++) {
 		pContext->StringToLocalUTF8(namesArray[i], 64, roleNames[i].c_str(), nullptr);
 	}
-	
+
 	return actualSize;
 }
 
 static cell_t user_SetNickName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* nickname;
 	pContext->LocalToString(params[2], &nickname);
@@ -3524,6 +3738,7 @@ static cell_t user_SetNickName(IPluginContext* pContext, const cell_t* params)
 static cell_t user_AddRole(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* roleId;
 	pContext->LocalToString(params[2], &roleId);
@@ -3541,6 +3756,7 @@ static cell_t user_AddRole(IPluginContext* pContext, const cell_t* params)
 static cell_t user_RemoveRole(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* roleId;
 	pContext->LocalToString(params[2], &roleId);
@@ -3558,6 +3774,7 @@ static cell_t user_RemoveRole(IPluginContext* pContext, const cell_t* params)
 static cell_t user_KickFromGuild(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->KickFromGuild();
 }
@@ -3565,6 +3782,7 @@ static cell_t user_KickFromGuild(IPluginContext* pContext, const cell_t* params)
 static cell_t user_BanFromGuild(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	char* reason;
 	pContext->LocalToString(params[2], &reason);
@@ -3576,6 +3794,7 @@ static cell_t user_BanFromGuild(IPluginContext* pContext, const cell_t* params)
 static cell_t user_UnbanFromGuild(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->UnbanFromGuild();
 }
@@ -3583,6 +3802,7 @@ static cell_t user_UnbanFromGuild(IPluginContext* pContext, const cell_t* params
 static cell_t user_SetTimeout(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	time_t timeout_until = static_cast<time_t>(params[2]);
 	return user->SetTimeout(timeout_until);
@@ -3591,6 +3811,7 @@ static cell_t user_SetTimeout(IPluginContext* pContext, const cell_t* params)
 static cell_t user_RemoveTimeout(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordUser* user = GetUserPointer(pContext, params[1]);
+	if (!user) return 0;
 
 	return user->RemoveTimeout();
 }
@@ -3600,7 +3821,7 @@ uint64_t DiscordGuild::GetBasePermissions(dpp::snowflake user_id) const
 	if (!m_client || !m_client->GetCluster()) {
 		return 0;
 	}
-	
+
 	try {
 		dpp::user* user = dpp::find_user(user_id);
 		if (!user) return 0;
@@ -3617,10 +3838,10 @@ uint64_t DiscordGuild::GetPermissionsInChannel(dpp::snowflake user_id, dpp::snow
 	try {
 		dpp::channel* ch = dpp::find_channel(channel_id);
 		if (!ch) return 0;
-		
+
 		dpp::user* user = dpp::find_user(user_id);
 		if (!user) return 0;
-		
+
 		uint64_t base_perms = m_guild.base_permissions(user);
 		dpp::permission perms = m_guild.permission_overwrites(base_perms, user, ch);
 		return static_cast<uint64_t>(perms);
@@ -3633,7 +3854,7 @@ uint64_t DiscordGuild::GetPermissionsInChannel(dpp::snowflake user_id, dpp::snow
 bool DiscordGuild::HasPermission(dpp::snowflake user_id, const char* permission) const
 {
 	if (!permission) return false;
-	
+
 	try {
 		uint64_t perm = std::stoull(permission);
 		uint64_t base_perms = GetBasePermissions(user_id);
@@ -3647,7 +3868,7 @@ bool DiscordGuild::HasPermission(dpp::snowflake user_id, const char* permission)
 bool DiscordGuild::HasPermissionInChannel(dpp::snowflake user_id, dpp::snowflake channel_id, const char* permission) const
 {
 	if (!permission) return false;
-	
+
 	try {
 		uint64_t perm = std::stoull(permission);
 		uint64_t channel_perms = GetPermissionsInChannel(user_id, channel_id);
@@ -3663,18 +3884,18 @@ bool DiscordGuild::Modify(const char* name, const char* description)
 	if (!m_client || !m_client->GetCluster()) {
 		return false;
 	}
-	
+
 	try {
 		dpp::guild modified_guild = m_guild;
-		
+
 		if (name && strlen(name) > 0) {
 			modified_guild.name = name;
 		}
-		
+
 		if (description && strlen(description) > 0) {
 			modified_guild.description = description;
 		}
-		
+
 		m_client->GetCluster()->guild_edit(modified_guild);
 		return true;
 	} catch (const std::exception& e) {
@@ -3683,9 +3904,285 @@ bool DiscordGuild::Modify(const char* name, const char* description)
 	}
 }
 
+bool DiscordGuild::GetInvites(IForward* callback_forward, cell_t data) {
+	if (!m_client || !m_client->IsRunning() || !callback_forward) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->guild_get_invites(m_guild.id, [client = m_client, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback)
+		{
+			if (callback.is_error())
+			{
+				smutils->LogError(myself, "Failed to get guild invites: %s", callback.get_error().message.c_str());
+				forwards->ReleaseForward(forward);
+				return;
+			}
+			auto invite_list = callback.get<dpp::invite_map>();
+
+			g_TaskQueue.Push([client, forward, invites = invite_list, value = value]() {
+				if (!forward || !forward->GetFunctionCount())
+				{
+					forwards->ReleaseForward(forward);
+					return;
+				}
+
+				size_t invite_count = invites.size();
+				std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(invite_count);
+
+				HandleError err;
+				HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+				size_t i = 0;
+				for (const auto& pair : invites)
+				{
+					DiscordInvite* invite_obj = new DiscordInvite(pair.second, client);
+					Handle_t inviteHandle = handlesys->CreateHandleEx(g_DiscordInviteHandle, invite_obj, &sec, nullptr, &err);
+
+					if (!inviteHandle)
+					{
+						smutils->LogError(myself, "Could not create invite handle (error %d)", err);
+						delete invite_obj;
+						continue;
+					}
+					handles[i++] = inviteHandle;
+				}
+
+				// Use actual count of created handles
+				size_t actual_count = i;
+
+				forward->PushCell(client->GetHandle());
+				forward->PushArray(handles.get(), static_cast<unsigned int>(actual_count));
+				forward->PushCell(static_cast<unsigned int>(actual_count));
+				forward->PushCell(value);
+				forward->Execute(nullptr);
+
+				for (i = 0; i < actual_count; i++)
+				{
+					handlesys->FreeHandle(handles[i], &sec);
+				}
+
+				forwards->ReleaseForward(forward);
+			});
+		});
+		return true;
+	}
+	catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to get guild invites: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordGuild::GetWebhooks(IForward* callback_forward, cell_t data) {
+	if (!m_client || !m_client->IsRunning() || !callback_forward) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->get_guild_webhooks(m_guild.id, [client = m_client, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback)
+		{
+			if (callback.is_error())
+			{
+				smutils->LogError(myself, "Failed to get guild webhooks: %s", callback.get_error().message.c_str());
+				forwards->ReleaseForward(forward);
+				return;
+			}
+			auto webhook_list = callback.get<dpp::webhook_map>();
+
+			g_TaskQueue.Push([client, forward, webhooks = webhook_list, value = value]() {
+				if (!forward || !forward->GetFunctionCount())
+				{
+					forwards->ReleaseForward(forward);
+					return;
+				}
+
+				size_t webhook_count = webhooks.size();
+				std::unique_ptr<cell_t[]> handles = std::make_unique<cell_t[]>(webhook_count);
+
+				HandleError err;
+				HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+				size_t i = 0;
+				for (const auto& pair : webhooks)
+				{
+					DiscordWebhook* webhook_obj = new DiscordWebhook(pair.second, client);
+					Handle_t webhookHandle = handlesys->CreateHandleEx(g_DiscordWebhookHandle, webhook_obj, &sec, nullptr, &err);
+
+					if (!webhookHandle)
+					{
+						smutils->LogError(myself, "Could not create webhook handle (error %d)", err);
+						delete webhook_obj;
+						continue;
+					}
+					handles[i++] = webhookHandle;
+				}
+
+				// Use actual count of created handles
+				size_t actual_count = i;
+
+				forward->PushCell(client->GetHandle());
+				forward->PushArray(handles.get(), static_cast<unsigned int>(actual_count));
+				forward->PushCell(static_cast<unsigned int>(actual_count));
+				forward->PushCell(value);
+				forward->Execute(nullptr);
+
+				for (i = 0; i < actual_count; i++)
+				{
+					handlesys->FreeHandle(handles[i], &sec);
+				}
+
+				forwards->ReleaseForward(forward);
+			});
+		});
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to get guild webhooks: %s", e.what());
+		return false;
+	}
+}
+
+// DiscordRole class method implementations
+bool DiscordRole::HasPermission(const char* permission) const
+{
+	try {
+		uint64_t target_perm = std::stoull(permission);
+		return (m_role.permissions & target_perm) == target_perm;
+	} catch (const std::exception& e) {
+		return false;
+	}
+}
+
+bool DiscordRole::Modify(const char* name, int color, int hoist, int mentionable)
+{
+	if (!m_client || !m_client->GetCluster()) {
+		return false;
+	}
+
+	try {
+		dpp::role modified_role = m_role;
+
+		if (name && strlen(name) > 0) {
+			modified_role.name = name;
+		}
+
+		if (color >= 0) {
+			modified_role.colour = color;
+		}
+
+		if (hoist >= 0) {
+			if (hoist == 0) {
+				modified_role.flags &= ~dpp::r_hoist;
+			} else {
+				modified_role.flags |= dpp::r_hoist;
+			}
+		}
+
+		if (mentionable >= 0) {
+			if (mentionable == 0) {
+				modified_role.flags &= ~dpp::r_mentionable;
+			} else {
+				modified_role.flags |= dpp::r_mentionable;
+			}
+		}
+
+		m_client->GetCluster()->role_edit(modified_role);
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to modify role: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordRole::Delete()
+{
+	if (!m_client || !m_client->GetCluster()) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->role_delete(m_guild_id, m_role.id);
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to delete role: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordRole::AddToUser(dpp::snowflake user_id)
+{
+	if (!m_client || !m_client->GetCluster()) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->guild_member_add_role(m_guild_id, user_id, m_role.id);
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to add role to user: %s", e.what());
+		return false;
+	}
+}
+
+// DiscordInvite implementation
+bool DiscordInvite::Create(dpp::snowflake channel_id)
+{
+	if (!m_client || !m_client->GetCluster()) {
+		return false;
+	}
+
+	try {
+		// Need to get the channel object first
+		dpp::channel* channel = dpp::find_channel(channel_id);
+		if (!channel) {
+			smutils->LogError(myself, "Failed to create invite: channel not found in cache");
+			return false;
+		}
+
+		m_client->GetCluster()->channel_invite_create(*channel, m_invite);
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to create invite: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordInvite::Delete()
+{
+	if (!m_client || !m_client->GetCluster()) {
+		return false;
+	}
+
+	if (m_invite.code.empty()) {
+		smutils->LogError(myself, "Cannot delete invite: invite code is empty");
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->invite_delete(m_invite.code);
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to delete invite: %s", e.what());
+		return false;
+	}
+}
+
+bool DiscordRole::RemoveFromUser(dpp::snowflake user_id)
+{
+	if (!m_client || !m_client->GetCluster()) {
+		return false;
+	}
+
+	try {
+		m_client->GetCluster()->guild_member_remove_role(m_guild_id, user_id, m_role.id);
+		return true;
+	} catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to remove role from user: %s", e.what());
+		return false;
+	}
+}
+
 static cell_t guild_FetchGuild(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* guildId;
 	pContext->LocalToString(params[2], &guildId);
@@ -3722,7 +4219,7 @@ static cell_t guild_FetchGuild(IPluginContext* pContext, const cell_t* params)
 					callback->PushCell(handle);
 					callback->PushCell(data);
 					callback->Execute(nullptr);
-					
+
 					handlesys->FreeHandle(handle, &sec);
 				}
 				catch (const std::exception& e) {
@@ -3774,6 +4271,7 @@ static cell_t guild_FetchGuild(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_FindGuild(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* guild_id_str;
 	pContext->LocalToString(params[2], &guild_id_str);
@@ -3781,7 +4279,7 @@ static cell_t guild_FindGuild(IPluginContext* pContext, const cell_t* params)
 	try {
 		dpp::snowflake guild_id = std::stoull(guild_id_str);
 		dpp::guild* guild_ptr = dpp::find_guild(guild_id);
-		
+
 		if (!guild_ptr) {
 			return 0; // Guild not found in cache
 		}
@@ -3809,6 +4307,7 @@ static cell_t guild_FindGuild(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	pContext->StringToLocal(params[2], params[3], guild->GetId().c_str());
 	return 1;
@@ -3817,6 +4316,7 @@ static cell_t guild_GetId(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	pContext->StringToLocal(params[2], params[3], guild->GetName());
 	return 1;
@@ -3825,6 +4325,7 @@ static cell_t guild_GetName(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetDescription(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	pContext->StringToLocal(params[2], params[3], guild->GetDescription());
 	return 1;
@@ -3833,6 +4334,7 @@ static cell_t guild_GetDescription(IPluginContext* pContext, const cell_t* param
 static cell_t guild_GetOwnerId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	pContext->StringToLocal(params[2], params[3], guild->GetOwnerId().c_str());
 	return 1;
@@ -3841,6 +4343,7 @@ static cell_t guild_GetOwnerId(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetMemberCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return static_cast<cell_t>(guild->GetMemberCount());
 }
@@ -3848,6 +4351,7 @@ static cell_t guild_GetMemberCount(IPluginContext* pContext, const cell_t* param
 static cell_t guild_GetVerificationLevel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetVerificationLevel();
 }
@@ -3855,6 +4359,7 @@ static cell_t guild_GetVerificationLevel(IPluginContext* pContext, const cell_t*
 static cell_t guild_GetPremiumTier(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetPremiumTier();
 }
@@ -3862,6 +4367,7 @@ static cell_t guild_GetPremiumTier(IPluginContext* pContext, const cell_t* param
 static cell_t guild_IsLarge(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsLarge();
 }
@@ -3869,6 +4375,7 @@ static cell_t guild_IsLarge(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_IsVerified(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsVerified();
 }
@@ -3876,6 +4383,7 @@ static cell_t guild_IsVerified(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_IsPartnered(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsPartnered();
 }
@@ -3883,6 +4391,7 @@ static cell_t guild_IsPartnered(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetIconUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	uint16_t size = static_cast<uint16_t>(params[4]);
 	bool prefer_animated = params[5] != 0;
@@ -3895,6 +4404,7 @@ static cell_t guild_GetIconUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetBannerUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	uint16_t size = static_cast<uint16_t>(params[4]);
 	bool prefer_animated = params[5] != 0;
@@ -3907,6 +4417,7 @@ static cell_t guild_GetBannerUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetSplashUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	uint16_t size = static_cast<uint16_t>(params[4]);
 	std::string splashUrl = guild->GetSplashUrl(size);
@@ -3918,6 +4429,7 @@ static cell_t guild_GetSplashUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetDiscoverySplashUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	uint16_t size = static_cast<uint16_t>(params[4]);
 	std::string splashUrl = guild->GetDiscoverySplashUrl(size);
@@ -3929,6 +4441,7 @@ static cell_t guild_GetDiscoverySplashUrl(IPluginContext* pContext, const cell_t
 static cell_t guild_GetVanityUrlCode(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	const char* vanityUrl = guild->GetVanityUrlCode();
 	pContext->StringToLocal(params[2], params[3], vanityUrl);
@@ -3938,6 +4451,7 @@ static cell_t guild_GetVanityUrlCode(IPluginContext* pContext, const cell_t* par
 static cell_t guild_GetMaxMembers(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetMaxMembers();
 }
@@ -3945,6 +4459,7 @@ static cell_t guild_GetMaxMembers(IPluginContext* pContext, const cell_t* params
 static cell_t guild_GetMaxPresences(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetMaxPresences();
 }
@@ -3952,6 +4467,7 @@ static cell_t guild_GetMaxPresences(IPluginContext* pContext, const cell_t* para
 static cell_t guild_GetPremiumSubscriptionCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetPremiumSubscriptionCount();
 }
@@ -3959,6 +4475,7 @@ static cell_t guild_GetPremiumSubscriptionCount(IPluginContext* pContext, const 
 static cell_t guild_GetExplicitContentFilter(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetExplicitContentFilter();
 }
@@ -3966,6 +4483,7 @@ static cell_t guild_GetExplicitContentFilter(IPluginContext* pContext, const cel
 static cell_t guild_GetMfaLevel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetMfaLevel();
 }
@@ -3973,6 +4491,7 @@ static cell_t guild_GetMfaLevel(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetNsfwLevel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetNsfwLevel();
 }
@@ -3980,6 +4499,7 @@ static cell_t guild_GetNsfwLevel(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetAfkTimeout(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetAfkTimeout();
 }
@@ -3987,6 +4507,7 @@ static cell_t guild_GetAfkTimeout(IPluginContext* pContext, const cell_t* params
 static cell_t guild_GetDefaultMessageNotifications(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetDefaultMessageNotifications();
 }
@@ -3994,6 +4515,7 @@ static cell_t guild_GetDefaultMessageNotifications(IPluginContext* pContext, con
 static cell_t guild_GetShardId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetShardId();
 }
@@ -4001,6 +4523,7 @@ static cell_t guild_GetShardId(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetFlags(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetFlags();
 }
@@ -4008,6 +4531,7 @@ static cell_t guild_GetFlags(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_GetFlagsExtra(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->GetFlagsExtra();
 }
@@ -4015,6 +4539,7 @@ static cell_t guild_GetFlagsExtra(IPluginContext* pContext, const cell_t* params
 static cell_t guild_GetAfkChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	std::string channelId = guild->GetAfkChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -4024,6 +4549,7 @@ static cell_t guild_GetAfkChannelId(IPluginContext* pContext, const cell_t* para
 static cell_t guild_GetSystemChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	std::string channelId = guild->GetSystemChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -4033,6 +4559,7 @@ static cell_t guild_GetSystemChannelId(IPluginContext* pContext, const cell_t* p
 static cell_t guild_GetRulesChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	std::string channelId = guild->GetRulesChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -4042,6 +4569,7 @@ static cell_t guild_GetRulesChannelId(IPluginContext* pContext, const cell_t* pa
 static cell_t guild_GetPublicUpdatesChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	std::string channelId = guild->GetPublicUpdatesChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -4051,6 +4579,7 @@ static cell_t guild_GetPublicUpdatesChannelId(IPluginContext* pContext, const ce
 static cell_t guild_GetSafetyAlertsChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	std::string channelId = guild->GetSafetyAlertsChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -4060,6 +4589,7 @@ static cell_t guild_GetSafetyAlertsChannelId(IPluginContext* pContext, const cel
 static cell_t guild_IsUnavailable(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsUnavailable();
 }
@@ -4067,6 +4597,7 @@ static cell_t guild_IsUnavailable(IPluginContext* pContext, const cell_t* params
 static cell_t guild_WidgetEnabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->WidgetEnabled();
 }
@@ -4074,6 +4605,7 @@ static cell_t guild_WidgetEnabled(IPluginContext* pContext, const cell_t* params
 static cell_t guild_HasInviteSplash(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasInviteSplash();
 }
@@ -4081,6 +4613,7 @@ static cell_t guild_HasInviteSplash(IPluginContext* pContext, const cell_t* para
 static cell_t guild_HasVipRegions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasVipRegions();
 }
@@ -4088,6 +4621,7 @@ static cell_t guild_HasVipRegions(IPluginContext* pContext, const cell_t* params
 static cell_t guild_HasVanityUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasVanityUrl();
 }
@@ -4095,6 +4629,7 @@ static cell_t guild_HasVanityUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_IsCommunity(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsCommunity();
 }
@@ -4102,6 +4637,7 @@ static cell_t guild_IsCommunity(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_HasRoleSubscriptions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasRoleSubscriptions();
 }
@@ -4109,6 +4645,7 @@ static cell_t guild_HasRoleSubscriptions(IPluginContext* pContext, const cell_t*
 static cell_t guild_HasNews(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasNews();
 }
@@ -4116,6 +4653,7 @@ static cell_t guild_HasNews(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_IsDiscoverable(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsDiscoverable();
 }
@@ -4123,6 +4661,7 @@ static cell_t guild_IsDiscoverable(IPluginContext* pContext, const cell_t* param
 static cell_t guild_IsFeatureable(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsFeatureable();
 }
@@ -4130,6 +4669,7 @@ static cell_t guild_IsFeatureable(IPluginContext* pContext, const cell_t* params
 static cell_t guild_HasAnimatedIcon(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasAnimatedIcon();
 }
@@ -4137,6 +4677,7 @@ static cell_t guild_HasAnimatedIcon(IPluginContext* pContext, const cell_t* para
 static cell_t guild_HasBanner(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasBanner();
 }
@@ -4144,6 +4685,7 @@ static cell_t guild_HasBanner(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_IsWelcomeScreenEnabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsWelcomeScreenEnabled();
 }
@@ -4151,6 +4693,7 @@ static cell_t guild_IsWelcomeScreenEnabled(IPluginContext* pContext, const cell_
 static cell_t guild_HasMemberVerificationGate(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasMemberVerificationGate();
 }
@@ -4158,6 +4701,7 @@ static cell_t guild_HasMemberVerificationGate(IPluginContext* pContext, const ce
 static cell_t guild_IsPreviewEnabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->IsPreviewEnabled();
 }
@@ -4165,6 +4709,7 @@ static cell_t guild_IsPreviewEnabled(IPluginContext* pContext, const cell_t* par
 static cell_t guild_HasAnimatedIconHash(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasAnimatedIconHash();
 }
@@ -4172,6 +4717,7 @@ static cell_t guild_HasAnimatedIconHash(IPluginContext* pContext, const cell_t* 
 static cell_t guild_HasAnimatedBannerHash(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasAnimatedBannerHash();
 }
@@ -4179,6 +4725,7 @@ static cell_t guild_HasAnimatedBannerHash(IPluginContext* pContext, const cell_t
 static cell_t guild_HasMonetizationEnabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasMonetizationEnabled();
 }
@@ -4186,6 +4733,7 @@ static cell_t guild_HasMonetizationEnabled(IPluginContext* pContext, const cell_
 static cell_t guild_HasMoreStickers(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasMoreStickers();
 }
@@ -4193,6 +4741,7 @@ static cell_t guild_HasMoreStickers(IPluginContext* pContext, const cell_t* para
 static cell_t guild_HasCreatorStorePage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasCreatorStorePage();
 }
@@ -4200,6 +4749,7 @@ static cell_t guild_HasCreatorStorePage(IPluginContext* pContext, const cell_t* 
 static cell_t guild_HasRoleIcons(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasRoleIcons();
 }
@@ -4207,6 +4757,7 @@ static cell_t guild_HasRoleIcons(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_HasSevenDayThreadArchive(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasSevenDayThreadArchive();
 }
@@ -4214,6 +4765,7 @@ static cell_t guild_HasSevenDayThreadArchive(IPluginContext* pContext, const cel
 static cell_t guild_HasThreeDayThreadArchive(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasThreeDayThreadArchive();
 }
@@ -4221,6 +4773,7 @@ static cell_t guild_HasThreeDayThreadArchive(IPluginContext* pContext, const cel
 static cell_t guild_HasTicketedEvents(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasTicketedEvents();
 }
@@ -4228,6 +4781,7 @@ static cell_t guild_HasTicketedEvents(IPluginContext* pContext, const cell_t* pa
 static cell_t guild_HasChannelBanners(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasChannelBanners();
 }
@@ -4235,6 +4789,7 @@ static cell_t guild_HasChannelBanners(IPluginContext* pContext, const cell_t* pa
 static cell_t guild_HasPremiumProgressBarEnabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasPremiumProgressBarEnabled();
 }
@@ -4242,6 +4797,7 @@ static cell_t guild_HasPremiumProgressBarEnabled(IPluginContext* pContext, const
 static cell_t guild_HasAnimatedBanner(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasAnimatedBanner();
 }
@@ -4249,6 +4805,7 @@ static cell_t guild_HasAnimatedBanner(IPluginContext* pContext, const cell_t* pa
 static cell_t guild_HasAutoModeration(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasAutoModeration();
 }
@@ -4256,6 +4813,7 @@ static cell_t guild_HasAutoModeration(IPluginContext* pContext, const cell_t* pa
 static cell_t guild_HasInvitesDisabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasInvitesDisabled();
 }
@@ -4263,6 +4821,7 @@ static cell_t guild_HasInvitesDisabled(IPluginContext* pContext, const cell_t* p
 static cell_t guild_HasSupportServer(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasSupportServer();
 }
@@ -4270,6 +4829,7 @@ static cell_t guild_HasSupportServer(IPluginContext* pContext, const cell_t* par
 static cell_t guild_HasRoleSubscriptionsAvailableForPurchase(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasRoleSubscriptionsAvailableForPurchase();
 }
@@ -4277,6 +4837,7 @@ static cell_t guild_HasRoleSubscriptionsAvailableForPurchase(IPluginContext* pCo
 static cell_t guild_HasRaidAlertsDisabled(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->HasRaidAlertsDisabled();
 }
@@ -4284,6 +4845,7 @@ static cell_t guild_HasRaidAlertsDisabled(IPluginContext* pContext, const cell_t
 static cell_t guild_NoJoinNotifications(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->NoJoinNotifications();
 }
@@ -4291,6 +4853,7 @@ static cell_t guild_NoJoinNotifications(IPluginContext* pContext, const cell_t* 
 static cell_t guild_NoBoostNotifications(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->NoBoostNotifications();
 }
@@ -4298,6 +4861,7 @@ static cell_t guild_NoBoostNotifications(IPluginContext* pContext, const cell_t*
 static cell_t guild_NoSetupTips(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->NoSetupTips();
 }
@@ -4305,6 +4869,7 @@ static cell_t guild_NoSetupTips(IPluginContext* pContext, const cell_t* params)
 static cell_t guild_NoStickerGreeting(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->NoStickerGreeting();
 }
@@ -4312,6 +4877,7 @@ static cell_t guild_NoStickerGreeting(IPluginContext* pContext, const cell_t* pa
 static cell_t guild_NoRoleSubscriptionNotifications(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->NoRoleSubscriptionNotifications();
 }
@@ -4319,6 +4885,7 @@ static cell_t guild_NoRoleSubscriptionNotifications(IPluginContext* pContext, co
 static cell_t guild_NoRoleSubscriptionNotificationReplies(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
 
 	return guild->NoRoleSubscriptionNotificationReplies();
 }
@@ -4326,10 +4893,11 @@ static cell_t guild_NoRoleSubscriptionNotificationReplies(IPluginContext* pConte
 static cell_t guild_GetBasePermissions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	char* user_id_str;
 	pContext->LocalToString(params[2], &user_id_str);
-	
+
 	try {
 		dpp::snowflake user_id = std::stoull(user_id_str);
 		uint64_t permissions = guild->GetBasePermissions(user_id);
@@ -4347,17 +4915,18 @@ static cell_t guild_GetBasePermissions(IPluginContext* pContext, const cell_t* p
 static cell_t guild_GetPermissionsInChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	char* user_id_str;
 	char* channel_id_str;
 	pContext->LocalToString(params[2], &user_id_str);
 	pContext->LocalToString(params[3], &channel_id_str);
-	
+
 	try {
 		dpp::snowflake user_id = std::stoull(user_id_str);
 		dpp::snowflake channel_id = std::stoull(channel_id_str);
 		uint64_t permissions = guild->GetPermissionsInChannel(user_id, channel_id);
-	
+
 		char permStr[21];
 		snprintf(permStr, sizeof(permStr), "%" PRIu64, permissions);
 		pContext->StringToLocal(params[4], params[5], permStr);
@@ -4371,12 +4940,13 @@ static cell_t guild_GetPermissionsInChannel(IPluginContext* pContext, const cell
 static cell_t guild_HasPermission(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	char* user_id_str;
 	char* permission;
 	pContext->LocalToString(params[2], &user_id_str);
 	pContext->LocalToString(params[3], &permission);
-	
+
 	try {
 		dpp::snowflake user_id = std::stoull(user_id_str);
 		return guild->HasPermission(user_id, permission);
@@ -4389,14 +4959,15 @@ static cell_t guild_HasPermission(IPluginContext* pContext, const cell_t* params
 static cell_t guild_HasPermissionInChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	char* user_id_str;
 	char* channel_id_str;
 	char* permission;
 	pContext->LocalToString(params[2], &user_id_str);
 	pContext->LocalToString(params[3], &channel_id_str);
 	pContext->LocalToString(params[4], &permission);
-	
+
 	try {
 		dpp::snowflake user_id = std::stoull(user_id_str);
 		dpp::snowflake channel_id = std::stoull(channel_id_str);
@@ -4410,72 +4981,809 @@ static cell_t guild_HasPermissionInChannel(IPluginContext* pContext, const cell_
 static cell_t guild_Modify(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	char* name;
 	char* description;
-	
+
 	pContext->LocalToString(params[2], &name);
 	pContext->LocalToString(params[3], &description);
-	
+
 	return guild->Modify(name, description);
+}
+
+static cell_t guild_GetInvites(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
+	if (!callback) {
+		pContext->ReportError("Invalid get invites callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
+	if (!forward || !forward->AddFunction(callback))
+	{
+		pContext->ReportError("Could not create get invites forward.");
+		return 0;
+	}
+
+	cell_t data = params[3];
+	guild->GetInvites(forward, data);
+	return 1;
+}
+
+static cell_t guild_GetWebhooks(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
+	if (!guild) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
+	if (!callback) {
+		pContext->ReportError("Invalid get webhooks callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
+	if (!forward || !forward->AddFunction(callback))
+	{
+		pContext->ReportError("Could not create get webhooks forward.");
+		return 0;
+	}
+
+	cell_t data = params[3];
+	guild->GetWebhooks(forward, data);
+	return 1;
 }
 
 static cell_t guild_GetRoleCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	return static_cast<cell_t>(guild->GetRoleCount());
 }
 
 static cell_t guild_GetChannelCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	return static_cast<cell_t>(guild->GetChannelCount());
 }
 
 static cell_t guild_GetThreadCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	return static_cast<cell_t>(guild->GetThreadCount());
 }
 
 static cell_t guild_GetEmojiCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	return static_cast<cell_t>(guild->GetEmojiCount());
 }
 
 static cell_t guild_GetVoiceMemberCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordGuild* guild = GetGuildPointer(pContext, params[1]);
-	
+	if (!guild) return 0;
+
 	return static_cast<cell_t>(guild->GetVoiceMemberCount());
 }
 
-static cell_t discord_GetUptime(IPluginContext* pContext, const cell_t* params)
+// DiscordRole native functions
+static cell_t role_CreateEmpty(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
-	
-	return static_cast<cell_t>(discord->GetUptime());
+	if (!discord) return 0;
+
+	DiscordRole* pDiscordRole = new DiscordRole(discord);
+
+	HandleError err;
+	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
+	Handle_t handle = handlesys->CreateHandleEx(g_DiscordRoleHandle, pDiscordRole, &sec, nullptr, &err);
+
+	if (!handle) {
+		delete pDiscordRole;
+		pContext->ReportError("Could not create role handle (error %d)", err);
+		return 0;
+	}
+
+	return handle;
+}
+
+static cell_t role_FetchRole(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* guildId;
+	char* roleId;
+	pContext->LocalToString(params[2], &guildId);
+	pContext->LocalToString(params[3], &roleId);
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[4]);
+	if (!callback) {
+		pContext->ReportError("Invalid create role callback function");
+		return 0;
+	}
+
+	cell_t data = params[5];
+
+	try {
+		dpp::snowflake guildFlake = std::stoull(guildId);
+		dpp::snowflake roleFlake = std::stoull(roleId);
+
+		// Check cache first
+		dpp::role* cached_role = dpp::find_role(roleFlake);
+		if (cached_role) {
+			g_TaskQueue.Push([discord, callback, data, cached_role, guildFlake]() {
+				try {
+					DiscordRole* pDiscordRole = new DiscordRole(*cached_role, guildFlake, discord);
+
+					HandleError err;
+					HandleSecurity sec;
+					sec.pOwner = myself->GetIdentity();
+					sec.pIdentity = myself->GetIdentity();
+					Handle_t handle = handlesys->CreateHandleEx(g_DiscordRoleHandle, pDiscordRole, &sec, nullptr, &err);
+
+					if (!handle) {
+						delete pDiscordRole;
+						return;
+					}
+
+					callback->PushCell(discord->GetHandle());
+					callback->PushCell(handle);
+					callback->PushCell(data);
+					callback->Execute(nullptr);
+
+					handlesys->FreeHandle(handle, &sec);
+				}
+				catch (const std::exception& e) {
+					return;
+				}
+			});
+			return 1;
+		}
+
+		// Fetch from API
+		discord->GetCluster()->roles_get(guildFlake, [discord, callback, data, guildFlake, roleFlake](const dpp::confirmation_callback_t& confirmation) {
+			g_TaskQueue.Push([discord, callback, data, guildFlake, roleFlake, confirmation]() {
+				if (confirmation.is_error()) {
+					return;
+				}
+
+				try {
+					dpp::role_map roles = confirmation.get<dpp::role_map>();
+					auto it = roles.find(roleFlake);
+					if (it == roles.end()) {
+						return;
+					}
+
+					DiscordRole* pDiscordRole = new DiscordRole(it->second, guildFlake, discord);
+
+					HandleError err;
+					HandleSecurity sec;
+					sec.pOwner = myself->GetIdentity();
+					sec.pIdentity = myself->GetIdentity();
+					Handle_t handle = handlesys->CreateHandleEx(g_DiscordRoleHandle, pDiscordRole, &sec, nullptr, &err);
+
+					if (!handle) {
+						delete pDiscordRole;
+						return;
+					}
+
+					callback->PushCell(discord->GetHandle());
+					callback->PushCell(handle);
+					callback->PushCell(data);
+					callback->Execute(nullptr);
+
+					handlesys->FreeHandle(handle, &sec);
+				} catch (const std::exception& e) {
+				}
+			});
+		});
+	} catch (const std::exception& e) {
+		pContext->ReportError("Invalid role ID: %s", roleId);
+		return 0;
+	}
+
+	return 1;
+}
+
+static cell_t role_FindRole(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* guild_id_str;
+	char* role_id_str;
+	pContext->LocalToString(params[2], &guild_id_str);
+	pContext->LocalToString(params[3], &role_id_str);
+
+	try {
+		dpp::snowflake guild_id = std::stoull(guild_id_str);
+		dpp::snowflake role_id = std::stoull(role_id_str);
+		dpp::role* role_ptr = dpp::find_role(role_id);
+
+		if (!role_ptr) {
+			return 0; // Role not found in cache
+		}
+
+		DiscordRole* pDiscordRole = new DiscordRole(*role_ptr, guild_id, discord);
+
+		HandleError err;
+		HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
+		Handle_t handle = handlesys->CreateHandleEx(g_DiscordRoleHandle, pDiscordRole, &sec, nullptr, &err);
+
+		if (!handle) {
+			delete pDiscordRole;
+			pContext->ReportError("Could not create role handle (error %d)", err);
+			return 0;
+		}
+
+		return handle;
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid role ID format: %s", role_id_str);
+		return 0;
+	}
+}
+
+static cell_t role_GetId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	pContext->StringToLocal(params[2], params[3], role->GetId().c_str());
+	return 1;
+}
+
+static cell_t role_GetName(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	pContext->StringToLocal(params[2], params[3], role->GetName());
+	return 1;
+}
+
+static cell_t role_GetColor(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return static_cast<cell_t>(role->GetColor());
+}
+
+static cell_t role_GetHoist(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->IsHoisted();
+}
+
+static cell_t role_GetIconHash(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	pContext->StringToLocal(params[2], params[3], role->GetIconHash().c_str());
+	return 1;
+}
+
+static cell_t role_GetUnicodeEmoji(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	pContext->StringToLocal(params[2], params[3], role->GetUnicodeEmoji());
+	return 1;
+}
+
+static cell_t role_GetPosition(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->GetPosition();
+}
+
+static cell_t role_GetPermissions(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	char perms_str[21];
+	snprintf(perms_str, sizeof(perms_str), "%" PRIu64, role->GetPermissions());
+	pContext->StringToLocal(params[2], params[3], perms_str);
+	return 1;
+}
+
+static cell_t role_GetManaged(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->IsManaged();
+}
+
+static cell_t role_GetMentionable(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->IsMentionable();
+}
+
+static cell_t role_GetHasTags(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->HasTags();
+}
+
+static cell_t role_GetIsPremiumSubscriberRole(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->IsPremiumSubscriberRole();
+}
+
+static cell_t role_GetIsAvailableForPurchase(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->IsAvailableForPurchase();
+}
+
+static cell_t role_GetIsGuildConnections(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->IsGuildConnections();
+}
+
+static cell_t role_GetBotId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	std::string bot_id = role->GetBotId();
+	if (bot_id.empty()) {
+		return 0;
+	}
+	pContext->StringToLocal(params[2], params[3], bot_id.c_str());
+	return 1;
+}
+
+static cell_t role_GetIntegrationId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	std::string integration_id = role->GetIntegrationId();
+	if (integration_id.empty()) {
+		return 0;
+	}
+	pContext->StringToLocal(params[2], params[3], integration_id.c_str());
+	return 1;
+}
+
+static cell_t role_GetSubscriptionListingId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	std::string subscription_id = role->GetSubscriptionListingId();
+	if (subscription_id.empty()) {
+		return 0;
+	}
+	pContext->StringToLocal(params[2], params[3], subscription_id.c_str());
+	return 1;
+}
+
+static cell_t role_HasPermission(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	char* permission;
+	pContext->LocalToString(params[2], &permission);
+	return role->HasPermission(permission);
+}
+
+static cell_t role_GetMention(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	pContext->StringToLocal(params[2], params[3], role->GetMention().c_str());
+	return 1;
+}
+
+static cell_t role_SetName(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	char* name;
+	pContext->LocalToString(params[2], &name);
+	role->SetName(name);
+	return 1;
+}
+
+static cell_t role_SetColor(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	uint32_t color = static_cast<uint32_t>(params[2]);
+	role->SetColor(color);
+	return 1;
+}
+
+static cell_t role_Modify(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	char* name;
+	pContext->LocalToString(params[2], &name);
+	int color = params[3];
+	int hoist = params[4];
+	int mentionable = params[5];
+
+	return role->Modify(name, color, hoist, mentionable);
+}
+
+static cell_t role_Delete(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	return role->Delete();
+}
+
+static cell_t role_AddToUser(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	char* user_id;
+	pContext->LocalToString(params[2], &user_id);
+
+	try {
+		dpp::snowflake user_flake = std::stoull(user_id);
+		return role->AddToUser(user_flake);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid user ID format: %s", user_id);
+		return 0;
+	}
+}
+
+static cell_t role_RemoveFromUser(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordRole* role = GetRolePointer(pContext, params[1]);
+	if (!role) return 0;
+
+	char* user_id;
+	pContext->LocalToString(params[2], &user_id);
+
+	try {
+		dpp::snowflake user_flake = std::stoull(user_id);
+		return role->RemoveFromUser(user_flake);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid user ID format: %s", user_id);
+		return 0;
+	}
+}
+
+// DiscordInvite native functions
+static cell_t invite_CreateInvite(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	DiscordInvite* invite = new DiscordInvite(discord);
+	Handle_t handle = handlesys->CreateHandle(g_DiscordInviteHandle, invite, pContext->GetIdentity(), myself->GetIdentity(), nullptr);
+
+	if (!handle) {
+		delete invite;
+		pContext->ReportError("Failed to create DiscordInvite handle");
+		return 0;
+	}
+
+	return handle;
+}
+
+static cell_t invite_GetCode(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetCode());
+	return 1;
+}
+
+static cell_t invite_GetGuildId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetGuildId().c_str());
+	return 1;
+}
+
+static cell_t invite_GetChannelId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetChannelId().c_str());
+	return 1;
+}
+
+static cell_t invite_GetInviterId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetInviterId().c_str());
+	return 1;
+}
+
+static cell_t invite_GetInviterUsername(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetInviterUsername());
+	return 1;
+}
+
+static cell_t invite_GetInviterAvatarUrl(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetInviterAvatarUrl().c_str());
+	return 1;
+}
+
+static cell_t invite_GetInviterIsBot(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetInviterIsBot();
+}
+
+static cell_t invite_GetGuildName(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetGuildName());
+	return 1;
+}
+
+static cell_t invite_GetChannelName(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	pContext->StringToLocal(params[2], params[3], invite->GetChannelName());
+	return 1;
+}
+
+static cell_t invite_GetChannelType(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetChannelType();
+}
+
+static cell_t invite_GetApproximatePresenceCount(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetApproximatePresenceCount();
+}
+
+static cell_t invite_GetApproximateMemberCount(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetApproximateMemberCount();
+}
+
+static cell_t invite_GetUses(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetUses();
+}
+
+static cell_t invite_GetMaxUses(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetMaxUses();
+}
+
+static cell_t invite_GetMaxAge(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetMaxAge();
+}
+
+static cell_t invite_GetTargetType(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->GetTargetType();
+}
+
+static cell_t invite_IsTemporary(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->IsTemporary();
+}
+
+static cell_t invite_IsUnique(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->IsUnique();
+}
+
+static cell_t invite_GetCreatedAt(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return static_cast<cell_t>(invite->GetCreatedAt());
+}
+
+static cell_t invite_GetExpiresAt(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return static_cast<cell_t>(invite->GetExpiresAt());
+}
+
+static cell_t invite_SetMaxAge(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	invite->SetMaxAge(params[2]);
+	return 1;
+}
+
+static cell_t invite_SetMaxUses(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	invite->SetMaxUses(params[2]);
+	return 1;
+}
+
+static cell_t invite_SetTargetUserId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	char* user_id;
+	pContext->LocalToString(params[2], &user_id);
+
+	try {
+		dpp::snowflake user_flake = std::stoull(user_id);
+		invite->SetTargetUserId(user_flake);
+		return 1;
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid user ID format: %s", user_id);
+		return 0;
+	}
+}
+
+static cell_t invite_SetTargetType(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	invite->SetTargetType(params[2]);
+	return 1;
+}
+
+static cell_t invite_SetTemporary(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	invite->SetTemporary(params[2] != 0);
+	return 1;
+}
+
+static cell_t invite_SetUnique(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	invite->SetUnique(params[2] != 0);
+	return 1;
+}
+
+static cell_t invite_Create(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	char* channel_id;
+	pContext->LocalToString(params[2], &channel_id);
+
+	try {
+		dpp::snowflake channel_snowflake = std::stoull(channel_id);
+		return invite->Create(channel_snowflake);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid channel ID format: %s", channel_id);
+		return 0;
+	}
+}
+
+static cell_t invite_Delete(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInvite* invite = GetInvitePointer(pContext, params[1]);
+	if (!invite) return 0;
+
+	return invite->Delete();
 }
 
 static cell_t slashcommand_CreateSlashCommand(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	DiscordSlashCommand* command = new DiscordSlashCommand(discord);
 
 	if (params[0] >= 2 && params[2] != 0) {
 		char* commandId;
 		pContext->LocalToString(params[2], &commandId);
-		
+
 		try {
 			dpp::snowflake cmd_id = std::stoull(commandId);
 			command->SetCommandId(cmd_id);
-			
+
 			if (params[0] >= 3 && params[3] != 0) {
 				char* guildId;
 				pContext->LocalToString(params[3], &guildId);
@@ -4507,12 +5815,13 @@ static cell_t slashcommand_CreateSlashCommand(IPluginContext* pContext, const ce
 static cell_t slashcommand_FromGlobalCommand(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* commandId;
 	pContext->LocalToString(params[2], &commandId);
 
 	DiscordSlashCommand* command = new DiscordSlashCommand(discord);
-	
+
 	try {
 		dpp::snowflake cmd_id = std::stoull(commandId);
 		command->SetCommandId(cmd_id);
@@ -4540,6 +5849,7 @@ static cell_t slashcommand_FromGlobalCommand(IPluginContext* pContext, const cel
 static cell_t slashcommand_FromGuildCommand(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* commandId;
 	pContext->LocalToString(params[2], &commandId);
@@ -4547,7 +5857,7 @@ static cell_t slashcommand_FromGuildCommand(IPluginContext* pContext, const cell
 	pContext->LocalToString(params[3], &guildId);
 
 	DiscordSlashCommand* command = new DiscordSlashCommand(discord);
-	
+
 	try {
 		dpp::snowflake cmd_id = std::stoull(commandId);
 		dpp::snowflake guild_id = std::stoull(guildId);
@@ -4577,6 +5887,7 @@ static cell_t slashcommand_FromGuildCommand(IPluginContext* pContext, const cell
 static cell_t slashcommand_SetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -4587,6 +5898,7 @@ static cell_t slashcommand_SetName(IPluginContext* pContext, const cell_t* param
 static cell_t slashcommand_SetDescription(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* description;
 	pContext->LocalToString(params[2], &description);
@@ -4597,6 +5909,7 @@ static cell_t slashcommand_SetDescription(IPluginContext* pContext, const cell_t
 static cell_t slashcommand_SetDefaultPermissions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* permissions;
 	pContext->LocalToString(params[2], &permissions);
@@ -4607,6 +5920,7 @@ static cell_t slashcommand_SetDefaultPermissions(IPluginContext* pContext, const
 static cell_t slashcommand_GetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	pContext->StringToLocal(params[2], params[3], command->GetName());
 	return 1;
@@ -4615,6 +5929,7 @@ static cell_t slashcommand_GetName(IPluginContext* pContext, const cell_t* param
 static cell_t slashcommand_GetDescription(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	pContext->StringToLocal(params[2], params[3], command->GetDescription());
 	return 1;
@@ -4623,6 +5938,7 @@ static cell_t slashcommand_GetDescription(IPluginContext* pContext, const cell_t
 static cell_t slashcommand_GetDefaultPermissions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	std::string permissions = command->GetDefaultPermissions();
 	pContext->StringToLocal(params[2], params[3], permissions.c_str());
@@ -4632,13 +5948,14 @@ static cell_t slashcommand_GetDefaultPermissions(IPluginContext* pContext, const
 static cell_t slashcommand_AddOption(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
-	
+
 	char* description;
 	pContext->LocalToString(params[3], &description);
-	
+
 	dpp::command_option_type type = static_cast<dpp::command_option_type>(params[4]);
 	bool required = params[5];
 	bool autocomplete = params[6];
@@ -4650,13 +5967,14 @@ static cell_t slashcommand_AddOption(IPluginContext* pContext, const cell_t* par
 static cell_t slashcommand_AddChoiceOption(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
-	
+
 	char* description;
 	pContext->LocalToString(params[3], &description);
-	
+
 	dpp::command_option_type type = static_cast<dpp::command_option_type>(params[4]);
 	bool required = params[5];
 
@@ -4667,10 +5985,11 @@ static cell_t slashcommand_AddChoiceOption(IPluginContext* pContext, const cell_
 static cell_t slashcommand_AddStringChoice(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* choice_name;
 	pContext->LocalToString(params[2], &choice_name);
-	
+
 	char* choice_value;
 	pContext->LocalToString(params[3], &choice_value);
 
@@ -4681,10 +6000,11 @@ static cell_t slashcommand_AddStringChoice(IPluginContext* pContext, const cell_
 static cell_t slashcommand_AddIntChoice(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* choice_name;
 	pContext->LocalToString(params[2], &choice_name);
-	
+
 	int64_t choice_value = static_cast<int64_t>(params[3]);
 
 	command->AddIntChoice(choice_name, choice_value);
@@ -4694,10 +6014,11 @@ static cell_t slashcommand_AddIntChoice(IPluginContext* pContext, const cell_t* 
 static cell_t slashcommand_AddFloatChoice(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* choice_name;
 	pContext->LocalToString(params[2], &choice_name);
-	
+
 	double choice_value = sp_ctof(params[3]);
 
 	command->AddFloatChoice(choice_name, choice_value);
@@ -4707,6 +6028,7 @@ static cell_t slashcommand_AddFloatChoice(IPluginContext* pContext, const cell_t
 static cell_t slashcommand_RegisterToGuild(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* guildId;
 	pContext->LocalToString(params[2], &guildId);
@@ -4724,6 +6046,7 @@ static cell_t slashcommand_RegisterToGuild(IPluginContext* pContext, const cell_
 static cell_t slashcommand_RegisterGlobally(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	return command->RegisterGlobally();
 }
@@ -4731,6 +6054,7 @@ static cell_t slashcommand_RegisterGlobally(IPluginContext* pContext, const cell
 static cell_t slashcommand_Update(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	dpp::snowflake guild_id = 0;
 	if (params[2] != 0) {
@@ -4751,6 +6075,7 @@ static cell_t slashcommand_Update(IPluginContext* pContext, const cell_t* params
 static cell_t slashcommand_Delete(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	dpp::snowflake guild_id = 0;
 	if (params[2] != 0) {
@@ -4771,13 +6096,14 @@ static cell_t slashcommand_Delete(IPluginContext* pContext, const cell_t* params
 static cell_t slashcommand_AddPermissionOverride(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
-	
+	if (!command) return 0;
+
 	char* targetId;
 	pContext->LocalToString(params[2], &targetId);
-	
+
 	int type = params[3];
 	bool permission = params[4] != 0;
-	
+
 	try {
 		dpp::snowflake target = std::stoull(targetId);
 		dpp::command_permission_type cmd_type = static_cast<dpp::command_permission_type>(type);
@@ -4793,12 +6119,13 @@ static cell_t slashcommand_AddPermissionOverride(IPluginContext* pContext, const
 static cell_t slashcommand_RemovePermissionOverride(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
-	
+	if (!command) return 0;
+
 	char* targetId;
 	pContext->LocalToString(params[2], &targetId);
-	
+
 	int type = params[3];
-	
+
 	try {
 		dpp::snowflake target = std::stoull(targetId);
 		dpp::command_permission_type cmd_type = static_cast<dpp::command_permission_type>(type);
@@ -4814,7 +6141,8 @@ static cell_t slashcommand_RemovePermissionOverride(IPluginContext* pContext, co
 static cell_t slashcommand_ClearPermissionOverrides(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
-	
+	if (!command) return 0;
+
 	command->ClearPermissionOverrides();
 	return 1;
 }
@@ -4822,42 +6150,45 @@ static cell_t slashcommand_ClearPermissionOverrides(IPluginContext* pContext, co
 static cell_t slashcommand_GetPermissionOverrideCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
-	
+	if (!command) return 0;
+
 	return static_cast<cell_t>(command->GetPermissionOverrideCount());
 }
 
 static cell_t slashcommand_GetPermissionOverride(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
-	
+	if (!command) return 0;
+
 	int index = params[2];
-	
+
 	dpp::snowflake target_id;
 	dpp::command_permission_type type;
 	bool permission;
-	
+
 	if (!command->GetPermissionOverride(static_cast<size_t>(index), target_id, type, permission)) {
 		return 0;
 	}
-	
+
 	char targetStr[21];
 	snprintf(targetStr, sizeof(targetStr), "%" PRIu64, static_cast<unsigned long long>(target_id));
 	pContext->StringToLocal(params[3], params[4], targetStr);
-	
+
 	cell_t* typePtr;
 	pContext->LocalToPhysAddr(params[5], &typePtr);
 	*typePtr = static_cast<cell_t>(type);
-	
+
 	cell_t* permPtr;
 	pContext->LocalToPhysAddr(params[6], &permPtr);
 	*permPtr = permission;
-	
+
 	return 1;
 }
 
 static cell_t slashcommand_ApplyPermissionOverrides(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* guildId;
 	pContext->LocalToString(params[2], &guildId);
@@ -4875,6 +6206,7 @@ static cell_t slashcommand_ApplyPermissionOverrides(IPluginContext* pContext, co
 static cell_t slashcommand_SetContextMenuType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	int type = params[2];
 	dpp::slashcommand_contextmenu_type contextType = static_cast<dpp::slashcommand_contextmenu_type>(type);
@@ -4885,6 +6217,7 @@ static cell_t slashcommand_SetContextMenuType(IPluginContext* pContext, const ce
 static cell_t slashcommand_GetContextMenuType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	return static_cast<cell_t>(command->GetContextMenuType());
 }
@@ -4892,6 +6225,7 @@ static cell_t slashcommand_GetContextMenuType(IPluginContext* pContext, const ce
 static cell_t slashcommand_SetNSFW(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	bool nsfw = params[2] != 0;
 	command->SetNSFW(nsfw);
@@ -4901,6 +6235,7 @@ static cell_t slashcommand_SetNSFW(IPluginContext* pContext, const cell_t* param
 static cell_t slashcommand_GetNSFW(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	return command->GetNSFW();
 }
@@ -4908,6 +6243,7 @@ static cell_t slashcommand_GetNSFW(IPluginContext* pContext, const cell_t* param
 static cell_t slashcommand_SetDMPermission(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	bool dm_permission = params[2] != 0;
 	command->SetDMPermission(dm_permission);
@@ -4917,6 +6253,7 @@ static cell_t slashcommand_SetDMPermission(IPluginContext* pContext, const cell_
 static cell_t slashcommand_GetDMPermission(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	return command->GetDMPermission();
 }
@@ -4924,14 +6261,15 @@ static cell_t slashcommand_GetDMPermission(IPluginContext* pContext, const cell_
 static cell_t slashcommand_AddLocalization(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	char* language;
 	char* name;
 	char* description = nullptr;
-	
+
 	pContext->LocalToString(params[2], &language);
 	pContext->LocalToString(params[3], &name);
-	
+
 	if (params[0] >= 4) {
 		pContext->LocalToString(params[4], &description);
 	}
@@ -4943,6 +6281,7 @@ static cell_t slashcommand_AddLocalization(IPluginContext* pContext, const cell_
 static cell_t slashcommand_SetInteractionContexts(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	cell_t* contexts_array;
 	pContext->LocalToPhysAddr(params[2], &contexts_array);
@@ -4960,6 +6299,7 @@ static cell_t slashcommand_SetInteractionContexts(IPluginContext* pContext, cons
 static cell_t slashcommand_SetIntegrationTypes(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	cell_t* types_array;
 	pContext->LocalToPhysAddr(params[2], &types_array);
@@ -4977,6 +6317,7 @@ static cell_t slashcommand_SetIntegrationTypes(IPluginContext* pContext, const c
 static cell_t slashcommand_SetOptionMinValue(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	float min_value = sp_ctof(params[2]);
 	command->SetLastOptionMinValue(static_cast<double>(min_value));
@@ -4986,6 +6327,7 @@ static cell_t slashcommand_SetOptionMinValue(IPluginContext* pContext, const cel
 static cell_t slashcommand_SetOptionMaxValue(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	float max_value = sp_ctof(params[2]);
 	command->SetLastOptionMaxValue(static_cast<double>(max_value));
@@ -4995,6 +6337,7 @@ static cell_t slashcommand_SetOptionMaxValue(IPluginContext* pContext, const cel
 static cell_t slashcommand_SetOptionMinLength(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	int min_length = params[2];
 	command->SetLastOptionMinLength(static_cast<int64_t>(min_length));
@@ -5004,6 +6347,7 @@ static cell_t slashcommand_SetOptionMinLength(IPluginContext* pContext, const ce
 static cell_t slashcommand_SetOptionMaxLength(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	int max_length = params[2];
 	command->SetLastOptionMaxLength(static_cast<int64_t>(max_length));
@@ -5013,6 +6357,7 @@ static cell_t slashcommand_SetOptionMaxLength(IPluginContext* pContext, const ce
 static cell_t slashcommand_AddOptionChannelType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	int channel_type = params[2];
 	command->AddLastOptionChannelType(static_cast<dpp::channel_type>(channel_type));
@@ -5022,6 +6367,7 @@ static cell_t slashcommand_AddOptionChannelType(IPluginContext* pContext, const 
 static cell_t slashcommand_GetMention(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	std::string mention = command->GetMention();
 	pContext->StringToLocal(params[2], params[3], mention.c_str());
@@ -5031,6 +6377,7 @@ static cell_t slashcommand_GetMention(IPluginContext* pContext, const cell_t* pa
 static cell_t slashcommand_GetCommandId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	std::string commandId = std::to_string(command->GetCommandId());
 	pContext->StringToLocal(params[2], params[3], commandId.c_str());
@@ -5040,6 +6387,7 @@ static cell_t slashcommand_GetCommandId(IPluginContext* pContext, const cell_t* 
 static cell_t slashcommand_GetGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordSlashCommand* command = GetSlashCommandPointer(pContext, params[1]);
+	if (!command) return 0;
 
 	std::string guildId = std::to_string(command->GetGuildId());
 	pContext->StringToLocal(params[2], params[3], guildId.c_str());
@@ -5049,6 +6397,7 @@ static cell_t slashcommand_GetGuildId(IPluginContext* pContext, const cell_t* pa
 static cell_t message_GetContent(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	pContext->StringToLocal(params[2], params[3], message->GetContent());
 	return 1;
@@ -5057,6 +6406,7 @@ static cell_t message_GetContent(IPluginContext* pContext, const cell_t* params)
 static cell_t message_GetContentLength(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetContentLength());
 }
@@ -5064,6 +6414,7 @@ static cell_t message_GetContentLength(IPluginContext* pContext, const cell_t* p
 static cell_t message_GetMessageId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	pContext->StringToLocal(params[2], params[3], message->GetMessageId().c_str());
 	return 1;
@@ -5072,6 +6423,7 @@ static cell_t message_GetMessageId(IPluginContext* pContext, const cell_t* param
 static cell_t message_GetChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	pContext->StringToLocal(params[2], params[3], message->GetChannelId().c_str());
 	return 1;
@@ -5080,6 +6432,7 @@ static cell_t message_GetChannelId(IPluginContext* pContext, const cell_t* param
 static cell_t message_GetGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	pContext->StringToLocal(params[2], params[3], message->GetGuildId().c_str());
 	return 1;
@@ -5088,9 +6441,10 @@ static cell_t message_GetGuildId(IPluginContext* pContext, const cell_t* params)
 static cell_t message_GetAuthor(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	Handle_t handle = message->GetAuthorHandle();
-	
+
 	if (!handle) {
 		pContext->ReportError("Could not create author handle");
 		return 0;
@@ -5102,6 +6456,7 @@ static cell_t message_GetAuthor(IPluginContext* pContext, const cell_t* params)
 static cell_t message_GetAuthorNickname(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	pContext->StringToLocal(params[2], params[3], message->GetAuthorNickname().c_str());
 	return 1;
@@ -5110,6 +6465,7 @@ static cell_t message_GetAuthorNickname(IPluginContext* pContext, const cell_t* 
 static cell_t message_GetType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetType());
 }
@@ -5117,6 +6473,7 @@ static cell_t message_GetType(IPluginContext* pContext, const cell_t* params)
 static cell_t message_IsPinned(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsPinned();
 }
@@ -5124,6 +6481,7 @@ static cell_t message_IsPinned(IPluginContext* pContext, const cell_t* params)
 static cell_t message_IsTTS(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsTTS();
 }
@@ -5131,6 +6489,7 @@ static cell_t message_IsTTS(IPluginContext* pContext, const cell_t* params)
 static cell_t message_IsMentionEveryone(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsMentionEveryone();
 }
@@ -5138,6 +6497,7 @@ static cell_t message_IsMentionEveryone(IPluginContext* pContext, const cell_t* 
 static cell_t message_IsBot(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsBot();
 }
@@ -5145,6 +6505,7 @@ static cell_t message_IsBot(IPluginContext* pContext, const cell_t* params)
 static cell_t message_Edit(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -5154,11 +6515,13 @@ static cell_t message_Edit(IPluginContext* pContext, const cell_t* params)
 static cell_t message_EditEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	return message->EditEmbed(content, embed);
 }
@@ -5166,6 +6529,7 @@ static cell_t message_EditEmbed(IPluginContext* pContext, const cell_t* params)
 static cell_t message_Delete(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->Delete();
 }
@@ -5173,6 +6537,7 @@ static cell_t message_Delete(IPluginContext* pContext, const cell_t* params)
 static cell_t message_Pin(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->Pin();
 }
@@ -5180,6 +6545,7 @@ static cell_t message_Pin(IPluginContext* pContext, const cell_t* params)
 static cell_t message_Unpin(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->Unpin();
 }
@@ -5187,6 +6553,7 @@ static cell_t message_Unpin(IPluginContext* pContext, const cell_t* params)
 static cell_t message_AddReaction(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* emoji;
 	pContext->LocalToString(params[2], &emoji);
@@ -5196,6 +6563,7 @@ static cell_t message_AddReaction(IPluginContext* pContext, const cell_t* params
 static cell_t message_RemoveReaction(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* emoji;
 	pContext->LocalToString(params[2], &emoji);
@@ -5205,6 +6573,7 @@ static cell_t message_RemoveReaction(IPluginContext* pContext, const cell_t* par
 static cell_t message_RemoveAllReactions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->RemoveAllReactions();
 }
@@ -5212,6 +6581,7 @@ static cell_t message_RemoveAllReactions(IPluginContext* pContext, const cell_t*
 static cell_t message_Reply(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -5221,11 +6591,13 @@ static cell_t message_Reply(IPluginContext* pContext, const cell_t* params)
 static cell_t message_ReplyEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	return message->ReplyEmbed(content, embed);
 }
@@ -5233,6 +6605,7 @@ static cell_t message_ReplyEmbed(IPluginContext* pContext, const cell_t* params)
 static cell_t message_Crosspost(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->Crosspost();
 }
@@ -5240,18 +6613,20 @@ static cell_t message_Crosspost(IPluginContext* pContext, const cell_t* params)
 static cell_t message_CreateThread(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
-	
+
 	int auto_archive_duration = (params[0] >= 3) ? params[3] : 60;
-	
+
 	return message->CreateThread(name, auto_archive_duration);
 }
 
 static cell_t message_GetFlags(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->GetFlags();
 }
@@ -5259,6 +6634,7 @@ static cell_t message_GetFlags(IPluginContext* pContext, const cell_t* params)
 static cell_t message_IsCrossposted(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsCrossposted();
 }
@@ -5266,6 +6642,7 @@ static cell_t message_IsCrossposted(IPluginContext* pContext, const cell_t* para
 static cell_t message_IsCrosspost(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsCrosspost();
 }
@@ -5273,6 +6650,7 @@ static cell_t message_IsCrosspost(IPluginContext* pContext, const cell_t* params
 static cell_t message_EmbedsSuppressed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->EmbedsSuppressed();
 }
@@ -5280,6 +6658,7 @@ static cell_t message_EmbedsSuppressed(IPluginContext* pContext, const cell_t* p
 static cell_t message_IsSourceMessageDeleted(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsSourceMessageDeleted();
 }
@@ -5287,6 +6666,7 @@ static cell_t message_IsSourceMessageDeleted(IPluginContext* pContext, const cel
 static cell_t message_IsUrgent(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsUrgent();
 }
@@ -5294,6 +6674,7 @@ static cell_t message_IsUrgent(IPluginContext* pContext, const cell_t* params)
 static cell_t message_HasThread(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->HasThread();
 }
@@ -5301,6 +6682,7 @@ static cell_t message_HasThread(IPluginContext* pContext, const cell_t* params)
 static cell_t message_IsEphemeral(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsEphemeral();
 }
@@ -5308,6 +6690,7 @@ static cell_t message_IsEphemeral(IPluginContext* pContext, const cell_t* params
 static cell_t message_IsLoading(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsLoading();
 }
@@ -5315,6 +6698,7 @@ static cell_t message_IsLoading(IPluginContext* pContext, const cell_t* params)
 static cell_t message_IsThreadMentionFailed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsThreadMentionFailed();
 }
@@ -5322,6 +6706,7 @@ static cell_t message_IsThreadMentionFailed(IPluginContext* pContext, const cell
 static cell_t message_NotificationsSuppressed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->NotificationsSuppressed();
 }
@@ -5329,6 +6714,7 @@ static cell_t message_NotificationsSuppressed(IPluginContext* pContext, const ce
 static cell_t message_IsVoiceMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsVoiceMessage();
 }
@@ -5336,6 +6722,7 @@ static cell_t message_IsVoiceMessage(IPluginContext* pContext, const cell_t* par
 static cell_t message_HasSnapshot(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->HasSnapshot();
 }
@@ -5343,6 +6730,7 @@ static cell_t message_HasSnapshot(IPluginContext* pContext, const cell_t* params
 static cell_t message_IsUsingComponentsV2(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsUsingComponentsV2();
 }
@@ -5350,6 +6738,7 @@ static cell_t message_IsUsingComponentsV2(IPluginContext* pContext, const cell_t
 static cell_t message_GetTimestamp(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetTimestamp());
 }
@@ -5357,6 +6746,7 @@ static cell_t message_GetTimestamp(IPluginContext* pContext, const cell_t* param
 static cell_t message_GetEditedTimestamp(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetEditedTimestamp());
 }
@@ -5364,6 +6754,7 @@ static cell_t message_GetEditedTimestamp(IPluginContext* pContext, const cell_t*
 static cell_t message_IsDM(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->IsDM();
 }
@@ -5371,6 +6762,7 @@ static cell_t message_IsDM(IPluginContext* pContext, const cell_t* params)
 static cell_t message_HasRemixAttachment(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->HasRemixAttachment();
 }
@@ -5378,6 +6770,7 @@ static cell_t message_HasRemixAttachment(IPluginContext* pContext, const cell_t*
 static cell_t message_GetAttachmentCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetAttachmentCount());
 }
@@ -5385,6 +6778,7 @@ static cell_t message_GetAttachmentCount(IPluginContext* pContext, const cell_t*
 static cell_t message_GetEmbedCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetEmbedCount());
 }
@@ -5392,6 +6786,7 @@ static cell_t message_GetEmbedCount(IPluginContext* pContext, const cell_t* para
 static cell_t message_GetReactionCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetReactionCount());
 }
@@ -5399,6 +6794,7 @@ static cell_t message_GetReactionCount(IPluginContext* pContext, const cell_t* p
 static cell_t message_GetStickerCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetStickerCount());
 }
@@ -5406,6 +6802,7 @@ static cell_t message_GetStickerCount(IPluginContext* pContext, const cell_t* pa
 static cell_t message_GetMentionedUserCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetMentionedUserCount());
 }
@@ -5413,6 +6810,7 @@ static cell_t message_GetMentionedUserCount(IPluginContext* pContext, const cell
 static cell_t message_GetMentionedRoleCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetMentionedRoleCount());
 }
@@ -5420,6 +6818,7 @@ static cell_t message_GetMentionedRoleCount(IPluginContext* pContext, const cell
 static cell_t message_GetMentionedChannelCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return static_cast<cell_t>(message->GetMentionedChannelCount());
 }
@@ -5427,6 +6826,7 @@ static cell_t message_GetMentionedChannelCount(IPluginContext* pContext, const c
 static cell_t message_GetMentionedUserId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	std::string userId = message->GetMentionedUserId(params[2]);
 	pContext->StringToLocal(params[3], params[4], userId.c_str());
@@ -5436,6 +6836,7 @@ static cell_t message_GetMentionedUserId(IPluginContext* pContext, const cell_t*
 static cell_t message_GetMentionedRoleId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	std::string roleId = message->GetMentionedRoleId(params[2]);
 	pContext->StringToLocal(params[3], params[4], roleId.c_str());
@@ -5445,6 +6846,7 @@ static cell_t message_GetMentionedRoleId(IPluginContext* pContext, const cell_t*
 static cell_t message_GetWebhookId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	std::string webhookId = message->GetWebhookId();
 	pContext->StringToLocal(params[2], params[3], webhookId.c_str());
@@ -5454,6 +6856,7 @@ static cell_t message_GetWebhookId(IPluginContext* pContext, const cell_t* param
 static cell_t message_GetNonce(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	const char* nonce = message->GetNonce();
 	pContext->StringToLocal(params[2], params[3], nonce);
@@ -5463,6 +6866,7 @@ static cell_t message_GetNonce(IPluginContext* pContext, const cell_t* params)
 static cell_t message_GetURL(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	std::string url = message->GetURL();
 	pContext->StringToLocal(params[2], params[3], url.c_str());
@@ -5472,6 +6876,7 @@ static cell_t message_GetURL(IPluginContext* pContext, const cell_t* params)
 static cell_t message_GetAttachmentFilename(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	std::string filename = message->GetAttachmentFilename(params[2]);
 	pContext->StringToLocal(params[3], params[4], filename.c_str());
@@ -5481,6 +6886,7 @@ static cell_t message_GetAttachmentFilename(IPluginContext* pContext, const cell
 static cell_t message_GetAttachmentURL(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	std::string url = message->GetAttachmentURL(params[2]);
 	pContext->StringToLocal(params[3], params[4], url.c_str());
@@ -5490,6 +6896,7 @@ static cell_t message_GetAttachmentURL(IPluginContext* pContext, const cell_t* p
 static cell_t message_GetAttachmentSize(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->GetAttachmentSize(params[2]);
 }
@@ -5497,10 +6904,11 @@ static cell_t message_GetAttachmentSize(IPluginContext* pContext, const cell_t* 
 static cell_t message_SetChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
-	
+
 	try {
 		dpp::snowflake channelFlake = std::stoull(channelId);
 		message->SetChannelId(channelFlake);
@@ -5515,6 +6923,7 @@ static cell_t message_SetChannelId(IPluginContext* pContext, const cell_t* param
 static cell_t message_SetType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	message->SetType(static_cast<dpp::message_type>(params[2]));
 	return 1;
@@ -5523,6 +6932,7 @@ static cell_t message_SetType(IPluginContext* pContext, const cell_t* params)
 static cell_t message_SetFlags(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	message->SetFlags(static_cast<uint16_t>(params[2]));
 	return 1;
@@ -5531,6 +6941,7 @@ static cell_t message_SetFlags(IPluginContext* pContext, const cell_t* params)
 static cell_t message_SetTTS(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	message->SetTTS(params[2]);
 	return 1;
@@ -5539,6 +6950,7 @@ static cell_t message_SetTTS(IPluginContext* pContext, const cell_t* params)
 static cell_t message_SetNonce(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* nonce;
 	pContext->LocalToString(params[2], &nonce);
@@ -5549,6 +6961,7 @@ static cell_t message_SetNonce(IPluginContext* pContext, const cell_t* params)
 static cell_t message_ClearEmbeds(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	message->ClearEmbeds();
 	return 1;
@@ -5557,6 +6970,7 @@ static cell_t message_ClearEmbeds(IPluginContext* pContext, const cell_t* params
 static cell_t message_Send(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	return message->Send();
 }
@@ -5564,6 +6978,7 @@ static cell_t message_Send(IPluginContext* pContext, const cell_t* params)
 static cell_t message_SetContent(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -5574,16 +6989,59 @@ static cell_t message_SetContent(IPluginContext* pContext, const cell_t* params)
 static cell_t message_AddEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[2]);
-	
+	if (!embed) return 0;
+
 	message->AddEmbed(embed);
+	return 1;
+}
+
+static cell_t message_SetAllowedMentions(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordMessage* message = GetMessagePointer(pContext, params[1]);
+	if (!message) return 0;
+
+	cell_t* users_array;
+	cell_t* roles_array;
+
+	pContext->LocalToPhysAddr(params[3], &users_array);
+	pContext->LocalToPhysAddr(params[5], &roles_array);
+
+	std::vector<dpp::snowflake> users(params[4]);
+	std::vector<dpp::snowflake> roles(params[6]);
+
+	for (size_t i = 0; i < users.size(); i++) {
+		char* str;
+		pContext->LocalToString(users_array[i], &str);
+		try {
+			users[i] = std::stoull(str);
+		}
+		catch (const std::exception& e) {
+			continue;
+		}
+	}
+
+	for (size_t i = 0; i < roles.size(); i++) {
+		char* str;
+		pContext->LocalToString(roles_array[i], &str);
+		try {
+			roles[i] = std::stoull(str);
+		}
+		catch (const std::exception& e) {
+			continue;
+		}
+	}
+
+	message->SetAllowedMentions(params[2], users, roles);
 	return 1;
 }
 
 static cell_t channel_CreateFromId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -5592,13 +7050,13 @@ static cell_t channel_CreateFromId(IPluginContext* pContext, const cell_t* param
 		dpp::snowflake channelFlake = std::stoull(channelId);
 
 		dpp::channel* channel_ptr = dpp::find_channel(channelFlake);
-		
+
 		if (!channel_ptr) {
 			dpp::channel channel_obj;
 			channel_obj.id = channelFlake;
-			
+
 			DiscordChannel* pDiscordChannel = new DiscordChannel(channel_obj, discord);
-			
+
 			HandleError err;
 			HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
 			Handle_t handle = handlesys->CreateHandleEx(g_DiscordChannelHandle, pDiscordChannel, &sec, nullptr, &err);
@@ -5635,6 +7093,7 @@ static cell_t channel_CreateFromId(IPluginContext* pContext, const cell_t* param
 static cell_t channel_GetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetName());
 	return 1;
@@ -5643,6 +7102,7 @@ static cell_t channel_GetName(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetId().c_str());
 	return 1;
@@ -5651,6 +7111,7 @@ static cell_t channel_GetId(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetGuildId().c_str());
 	return 1;
@@ -5659,14 +7120,28 @@ static cell_t channel_GetGuildId(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetParentId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetParentId().c_str());
+	return 1;
+}
+
+static cell_t channel_SetParentId(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
+
+	char* parent_id;
+	pContext->LocalToString(params[2], &parent_id);
+
+	channel->SetParentId(parent_id);
 	return 1;
 }
 
 static cell_t channel_GetTopic(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetTopic());
 	return 1;
@@ -5675,6 +7150,7 @@ static cell_t channel_GetTopic(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->GetType();
 }
@@ -5682,6 +7158,7 @@ static cell_t channel_GetType(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetPosition(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->GetPosition();
 }
@@ -5689,6 +7166,7 @@ static cell_t channel_GetPosition(IPluginContext* pContext, const cell_t* params
 static cell_t channel_IsNSFW(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsNSFW();
 }
@@ -5696,6 +7174,7 @@ static cell_t channel_IsNSFW(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_IsTextChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsTextChannel();
 }
@@ -5703,6 +7182,7 @@ static cell_t channel_IsTextChannel(IPluginContext* pContext, const cell_t* para
 static cell_t channel_IsVoiceChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsVoiceChannel();
 }
@@ -5710,6 +7190,7 @@ static cell_t channel_IsVoiceChannel(IPluginContext* pContext, const cell_t* par
 static cell_t channel_IsCategory(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsCategory();
 }
@@ -5717,6 +7198,7 @@ static cell_t channel_IsCategory(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_IsThread(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsThread();
 }
@@ -5724,6 +7206,7 @@ static cell_t channel_IsThread(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_IsForum(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsForum();
 }
@@ -5731,6 +7214,7 @@ static cell_t channel_IsForum(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_IsNewsChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsNewsChannel();
 }
@@ -5738,6 +7222,7 @@ static cell_t channel_IsNewsChannel(IPluginContext* pContext, const cell_t* para
 static cell_t channel_IsStageChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->IsStageChannel();
 }
@@ -5745,6 +7230,7 @@ static cell_t channel_IsStageChannel(IPluginContext* pContext, const cell_t* par
 static cell_t channel_GetBitrate(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->GetBitrate();
 }
@@ -5752,6 +7238,7 @@ static cell_t channel_GetBitrate(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetUserLimit(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->GetUserLimit();
 }
@@ -5759,6 +7246,7 @@ static cell_t channel_GetUserLimit(IPluginContext* pContext, const cell_t* param
 static cell_t channel_GetRateLimitPerUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->GetRateLimitPerUser();
 }
@@ -5766,6 +7254,7 @@ static cell_t channel_GetRateLimitPerUser(IPluginContext* pContext, const cell_t
 static cell_t channel_GetMention(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetMention().c_str());
 	return 1;
@@ -5774,6 +7263,7 @@ static cell_t channel_GetMention(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	pContext->StringToLocal(params[2], params[3], channel->GetUrl().c_str());
 	return 1;
@@ -5782,6 +7272,7 @@ static cell_t channel_GetUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_SetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -5791,6 +7282,7 @@ static cell_t channel_SetName(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_SetTopic(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* topic;
 	pContext->LocalToString(params[2], &topic);
@@ -5800,6 +7292,7 @@ static cell_t channel_SetTopic(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_SetNSFW(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	bool nsfw = params[2];
 	return channel->SetNSFW(nsfw);
@@ -5808,6 +7301,7 @@ static cell_t channel_SetNSFW(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_Delete(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	return channel->Delete();
 }
@@ -5815,6 +7309,7 @@ static cell_t channel_Delete(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_SetPosition(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	uint16_t position = static_cast<uint16_t>(params[2]);
 	return channel->SetPosition(position);
@@ -5823,6 +7318,7 @@ static cell_t channel_SetPosition(IPluginContext* pContext, const cell_t* params
 static cell_t channel_SetRateLimitPerUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	uint16_t seconds = static_cast<uint16_t>(params[2]);
 	return channel->SetRateLimitPerUser(seconds);
@@ -5831,6 +7327,7 @@ static cell_t channel_SetRateLimitPerUser(IPluginContext* pContext, const cell_t
 static cell_t channel_SetBitrate(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	uint16_t bitrate = static_cast<uint16_t>(params[2]);
 	return channel->SetBitrate(bitrate);
@@ -5839,6 +7336,7 @@ static cell_t channel_SetBitrate(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_SetUserLimit(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	uint8_t limit = static_cast<uint8_t>(params[2]);
 	return channel->SetUserLimit(limit);
@@ -5847,6 +7345,7 @@ static cell_t channel_SetUserLimit(IPluginContext* pContext, const cell_t* param
 static cell_t channel_SetParent(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* parentId;
 	pContext->LocalToString(params[2], &parentId);
@@ -5864,11 +7363,12 @@ static cell_t channel_SetParent(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_AddPermissionOverwrite(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* targetId;
 	pContext->LocalToString(params[2], &targetId);
 	uint8_t type = static_cast<uint8_t>(params[3]);
-	
+
 	char* allowed_str;
 	char* denied_str;
 	pContext->LocalToString(params[4], &allowed_str);
@@ -5889,11 +7389,12 @@ static cell_t channel_AddPermissionOverwrite(IPluginContext* pContext, const cel
 static cell_t channel_SetPermissionOverwrite(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* targetId;
 	pContext->LocalToString(params[2], &targetId);
 	uint8_t type = static_cast<uint8_t>(params[3]);
-	
+
 	char* allowed_str;
 	char* denied_str;
 	pContext->LocalToString(params[4], &allowed_str);
@@ -5914,6 +7415,7 @@ static cell_t channel_SetPermissionOverwrite(IPluginContext* pContext, const cel
 static cell_t channel_RemovePermissionOverwrite(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* targetId;
 	pContext->LocalToString(params[2], &targetId);
@@ -5932,6 +7434,7 @@ static cell_t channel_RemovePermissionOverwrite(IPluginContext* pContext, const 
 static cell_t channel_GetUserPermissions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* userId;
 	pContext->LocalToString(params[2], &userId);
@@ -5951,6 +7454,7 @@ static cell_t channel_GetUserPermissions(IPluginContext* pContext, const cell_t*
 static cell_t channel_CreateInvite(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	int max_age = (params[0] >= 2) ? params[2] : 86400;
 	int max_uses = (params[0] >= 3) ? params[3] : 0;
@@ -5960,25 +7464,67 @@ static cell_t channel_CreateInvite(IPluginContext* pContext, const cell_t* param
 	return channel->CreateInvite(max_age, max_uses, temporary, unique);
 }
 
-static cell_t channel_GetInvites(IPluginContext* pContext, const cell_t* params)
-{
-	// TODO: Implement this
-	return false;
-}
-
-static cell_t channel_DeleteInvite(IPluginContext* pContext, const cell_t* params)
+static cell_t channel_CreateInviteFromObject(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
-	char* invite_code;
-	pContext->LocalToString(params[2], &invite_code);
+	DiscordInvite* invite = GetInvitePointer(pContext, params[2]);
+	if (!invite) return 0;
 
-	return channel->DeleteInvite(invite_code);
+	return channel->CreateInviteFromObject(invite);
+}
+
+static cell_t channel_GetInvites(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
+	if (!callback) {
+		pContext->ReportError("Invalid get invites callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
+	if (!forward || !forward->AddFunction(callback))
+	{
+		pContext->ReportError("Could not create get invites forward.");
+		return 0;
+	}
+
+	cell_t data = params[3];
+	channel->GetInvites(forward, data);
+	return 1;
+}
+
+static cell_t channel_GetWebhooks(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[2]);
+	if (!callback) {
+		pContext->ReportError("Invalid get webhooks callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
+	if (!forward || !forward->AddFunction(callback))
+	{
+		pContext->ReportError("Could not create get webhooks forward.");
+		return 0;
+	}
+
+	cell_t data = params[3];
+	channel->GetWebhooks(forward, data);
+	return 1;
 }
 
 static cell_t channel_SendMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -5988,11 +7534,13 @@ static cell_t channel_SendMessage(IPluginContext* pContext, const cell_t* params
 static cell_t channel_SendMessageEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	return channel->SendMessageEmbed(content, embed);
 }
@@ -6000,8 +7548,10 @@ static cell_t channel_SendMessageEmbed(IPluginContext* pContext, const cell_t* p
 static cell_t channel_SendDiscordMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	DiscordMessage* message = GetMessagePointer(pContext, params[2]);
+	if (!message) return 0;
 
 	return channel->SendDiscordMessage(message);
 }
@@ -6009,24 +7559,27 @@ static cell_t channel_SendDiscordMessage(IPluginContext* pContext, const cell_t*
 static cell_t channel_SetRTCRegion(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
+	if (!channel) return 0;
 
 	char* region;
 	pContext->LocalToString(params[2], &region);
-	
+
 	return channel->SetRTCRegion(region);
 }
 
 static cell_t channel_GetFlags(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->GetFlags();
 }
 
 static cell_t channel_GetOwnerId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	std::string ownerId = channel->GetOwnerId();
 	pContext->StringToLocal(params[2], params[3], ownerId.c_str());
 	return 1;
@@ -6035,7 +7588,8 @@ static cell_t channel_GetOwnerId(IPluginContext* pContext, const cell_t* params)
 static cell_t channel_GetLastMessageId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	std::string lastMessageId = channel->GetLastMessageId();
 	pContext->StringToLocal(params[2], params[3], lastMessageId.c_str());
 	return 1;
@@ -6044,42 +7598,48 @@ static cell_t channel_GetLastMessageId(IPluginContext* pContext, const cell_t* p
 static cell_t channel_GetLastPinTimestamp(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return static_cast<cell_t>(channel->GetLastPinTimestamp());
 }
 
 static cell_t channel_GetDefaultThreadRateLimitPerUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->GetDefaultThreadRateLimitPerUser();
 }
 
 static cell_t channel_GetDefaultAutoArchiveDuration(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->GetDefaultAutoArchiveDuration();
 }
 
 static cell_t channel_GetDefaultSortOrder(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->GetDefaultSortOrder();
 }
 
 static cell_t channel_GetForumLayout(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->GetForumLayout();
 }
 
 static cell_t channel_GetRTCRegion(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	std::string region = channel->GetRTCRegion();
 	pContext->StringToLocal(params[2], params[3], region.c_str());
 	return 1;
@@ -6088,78 +7648,89 @@ static cell_t channel_GetRTCRegion(IPluginContext* pContext, const cell_t* param
 static cell_t channel_IsDM(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsDM();
 }
 
 static cell_t channel_IsGroupDM(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsGroupDM();
 }
 
 static cell_t channel_IsMediaChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsMediaChannel();
 }
 
 static cell_t channel_IsVideo720p(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsVideo720p();
 }
 
 static cell_t channel_IsVideoAuto(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsVideoAuto();
 }
 
 static cell_t channel_IsPinnedThread(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsPinnedThread();
 }
 
 static cell_t channel_IsTagRequired(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsTagRequired();
 }
 
 static cell_t channel_IsDownloadOptionsHidden(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsDownloadOptionsHidden();
 }
 
 static cell_t channel_IsLockedPermissions(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return channel->IsLockedPermissions();
 }
 
 static cell_t channel_GetPermissionOverwriteCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return static_cast<cell_t>(channel->GetPermissionOverwriteCount());
 }
 
 static cell_t channel_GetPermissionOverwriteTargetId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
+
 	std::string targetId = channel->GetPermissionOverwriteTargetId(params[2]);
 	pContext->StringToLocal(params[3], params[4], targetId.c_str());
 	return 1;
@@ -6168,22 +7739,24 @@ static cell_t channel_GetPermissionOverwriteTargetId(IPluginContext* pContext, c
 static cell_t channel_GetPermissionOverwriteType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
 	return static_cast<cell_t>(channel->GetPermissionOverwriteType(params[2]));
 }
 
 static cell_t channel_GetAvailableTagCount(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	return static_cast<cell_t>(channel->GetAvailableTagCount());
 }
 
 static cell_t channel_GetAvailableTagName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	int index = params[2];
 	std::string tagName = channel->GetAvailableTagName(index);
 	pContext->StringToLocal(params[3], params[4], tagName.c_str());
@@ -6193,7 +7766,8 @@ static cell_t channel_GetAvailableTagName(IPluginContext* pContext, const cell_t
 static cell_t channel_GetAvailableTagId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	int index = params[2];
 	std::string tagId = channel->GetAvailableTagId(index);
 	pContext->StringToLocal(params[3], params[4], tagId.c_str());
@@ -6203,7 +7777,8 @@ static cell_t channel_GetAvailableTagId(IPluginContext* pContext, const cell_t* 
 static cell_t channel_GetAvailableTagEmoji(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	int index = params[2];
 	std::string tagEmoji = channel->GetAvailableTagEmoji(index);
 	pContext->StringToLocal(params[3], params[4], tagEmoji.c_str());
@@ -6213,7 +7788,8 @@ static cell_t channel_GetAvailableTagEmoji(IPluginContext* pContext, const cell_
 static cell_t channel_GetAvailableTagModerated(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	int index = params[2];
 	return channel->GetAvailableTagModerated(index);
 }
@@ -6221,7 +7797,8 @@ static cell_t channel_GetAvailableTagModerated(IPluginContext* pContext, const c
 static cell_t channel_GetAvailableTagEmojiIsCustom(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	int index = params[2];
 	return channel->GetAvailableTagEmojiIsCustom(index);
 }
@@ -6229,38 +7806,38 @@ static cell_t channel_GetAvailableTagEmojiIsCustom(IPluginContext* pContext, con
 static cell_t channel_CreateForumTag(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
 	char* name;
 	char* emoji = nullptr;
 	pContext->LocalToString(params[2], &name);
-	
+
 	if (params[0] >= 3) {
 		pContext->LocalToString(params[3], &emoji);
 	}
-	
+
 	bool moderated = (params[0] >= 4) ? (params[4] != 0) : false;
-	
+
 	return channel->CreateForumTag(name, emoji ? emoji : "", moderated);
 }
 
 static cell_t channel_EditForumTag(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
 	char* tag_id;
 	char* name;
 	char* emoji = nullptr;
 	pContext->LocalToString(params[2], &tag_id);
 	pContext->LocalToString(params[3], &name);
-	
+
 	if (params[0] >= 4) {
 		pContext->LocalToString(params[4], &emoji);
 	}
-	
+
 	bool moderated = (params[0] >= 5) ? (params[5] != 0) : false;
-	
+
 	dpp::snowflake tagId = 0;
 	try {
 		tagId = std::stoull(tag_id);
@@ -6268,18 +7845,18 @@ static cell_t channel_EditForumTag(IPluginContext* pContext, const cell_t* param
 		pContext->ReportError("Invalid tag ID format");
 		return 0;
 	}
-	
+
 	return channel->EditForumTag(tagId, name, emoji ? emoji : "", moderated);
 }
 
 static cell_t channel_DeleteForumTag(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
 	char* tag_id;
 	pContext->LocalToString(params[2], &tag_id);
-	
+
 	dpp::snowflake tagId = 0;
 	try {
 		tagId = std::stoull(tag_id);
@@ -6287,27 +7864,27 @@ static cell_t channel_DeleteForumTag(IPluginContext* pContext, const cell_t* par
 		pContext->ReportError("Invalid tag ID format");
 		return 0;
 	}
-	
+
 	return channel->DeleteForumTag(tagId);
 }
 
 static cell_t channel_CreateForumThread(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
 	char* name;
 	char* message;
 	pContext->LocalToString(params[2], &name);
 	pContext->LocalToString(params[3], &message);
-	
+
 	std::vector<dpp::snowflake> tag_ids;
-	
+
 	if (params[0] >= 4 && params[4] != 0) {
 		cell_t* tag_array;
 		pContext->LocalToPhysAddr(params[4], &tag_array);
 		int tag_count = params[5];
-		
+
 		for (int i = 0; i < tag_count; i++) {
 			char* tag_id;
 			pContext->LocalToString(tag_array[i], &tag_id);
@@ -6318,32 +7895,33 @@ static cell_t channel_CreateForumThread(IPluginContext* pContext, const cell_t* 
 			}
 		}
 	}
-	
+
 	int auto_archive = (params[0] >= 6) ? params[6] : 1440;
 	int rate_limit = (params[0] >= 7) ? params[7] : 0;
-	
+
 	return channel->CreateForumThread(name, message, tag_ids, auto_archive, rate_limit);
 }
 
 static cell_t channel_CreateForumThreadEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
-	
+	if (!channel) return 0;
+
 	char* name;
 	char* message;
 	pContext->LocalToString(params[2], &name);
 	pContext->LocalToString(params[3], &message);
-	
+
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[4]);
-	
+	if (!embed) return 0;
+
 	std::vector<dpp::snowflake> tag_ids;
-	
+
 	if (params[0] >= 5 && params[5] != 0) {
 		cell_t* tag_array;
 		pContext->LocalToPhysAddr(params[5], &tag_array);
 		int tag_count = params[6];
-		
+
 		for (int i = 0; i < tag_count; i++) {
 			char* tag_id;
 			pContext->LocalToString(tag_array[i], &tag_id);
@@ -6354,10 +7932,10 @@ static cell_t channel_CreateForumThreadEmbed(IPluginContext* pContext, const cel
 			}
 		}
 	}
-	
+
 	int auto_archive = (params[0] >= 7) ? params[7] : 1440;
 	int rate_limit = (params[0] >= 8) ? params[8] : 0;
-	
+
 	return channel->CreateForumThreadEmbed(name, message, embed, tag_ids, auto_archive, rate_limit);
 }
 
@@ -6366,32 +7944,33 @@ static cell_t forumtag_Create(IPluginContext* pContext, const cell_t* params)
 	char* name;
 	char* emoji = nullptr;
 	pContext->LocalToString(params[1], &name);
-	
+
 	if (params[0] >= 2) {
 		pContext->LocalToString(params[2], &emoji);
 	}
-	
+
 	bool moderated = (params[0] >= 3) ? (params[3] != 0) : false;
-	
+
 	DiscordForumTag* pForumTag = new DiscordForumTag(name, emoji ? emoji : "", moderated);
-	
+
 	HandleError err;
 	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
 	Handle_t handle = handlesys->CreateHandleEx(g_DiscordForumTagHandle, pForumTag, &sec, nullptr, &err);
-	
+
 	if (!handle)
 	{
 		delete pForumTag;
 		pContext->ReportError("Could not create forum tag handle (error %d)", err);
 		return 0;
 	}
-	
+
 	return handle;
 }
 
 static cell_t forumtag_GetId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	std::string tagId = tag->GetId();
 	pContext->StringToLocal(params[2], params[3], tagId.c_str());
@@ -6401,6 +7980,7 @@ static cell_t forumtag_GetId(IPluginContext* pContext, const cell_t* params)
 static cell_t forumtag_GetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	std::string tagName = tag->GetName();
 	pContext->StringToLocal(params[2], params[3], tagName.c_str());
@@ -6410,6 +7990,7 @@ static cell_t forumtag_GetName(IPluginContext* pContext, const cell_t* params)
 static cell_t forumtag_SetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -6420,6 +8001,7 @@ static cell_t forumtag_SetName(IPluginContext* pContext, const cell_t* params)
 static cell_t forumtag_GetEmoji(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	std::string emoji = tag->GetEmoji();
 	pContext->StringToLocal(params[2], params[3], emoji.c_str());
@@ -6429,6 +8011,7 @@ static cell_t forumtag_GetEmoji(IPluginContext* pContext, const cell_t* params)
 static cell_t forumtag_SetEmoji(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	char* emoji;
 	pContext->LocalToString(params[2], &emoji);
@@ -6439,6 +8022,7 @@ static cell_t forumtag_SetEmoji(IPluginContext* pContext, const cell_t* params)
 static cell_t forumtag_GetIsModerated(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	return tag->IsModerated();
 }
@@ -6446,6 +8030,7 @@ static cell_t forumtag_GetIsModerated(IPluginContext* pContext, const cell_t* pa
 static cell_t forumtag_SetIsModerated(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	bool moderated = params[2] != 0;
 	tag->SetModerated(moderated);
@@ -6455,6 +8040,7 @@ static cell_t forumtag_SetIsModerated(IPluginContext* pContext, const cell_t* pa
 static cell_t forumtag_GetEmojiIsCustom(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	return tag->EmojiIsCustom();
 }
@@ -6462,10 +8048,11 @@ static cell_t forumtag_GetEmojiIsCustom(IPluginContext* pContext, const cell_t* 
 static cell_t forumtag_ApplyToChannel(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordForumTag* tag = GetForumTagPointer(pContext, params[1]);
+	if (!tag) return 0;
 
 	DiscordChannel* channel = GetChannelPointer(pContext, params[2]);
-	
-	
+	if (!channel) return 0;
+
 	// Add the tag to the channel's available_tags
 	// This would need to be implemented in the DiscordChannel class
 	// For now, we'll just return true as this is a complex operation
@@ -6476,16 +8063,158 @@ static cell_t forumtag_ApplyToChannel(IPluginContext* pContext, const cell_t* pa
 static cell_t channel_GetIconUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordChannel* channel = GetChannelPointer(pContext, params[1]);
-	
+	if (!channel) return 0;
+
 	int size = (params[0] >= 3) ? params[3] : 0;
 	std::string iconUrl = channel->GetIconUrl(size);
 	pContext->StringToLocal(params[2], params[3], iconUrl.c_str());
 	return 1;
 }
 
+static cell_t webhook_GetChannelWebhooks(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* channelId;
+	pContext->LocalToString(params[2], &channelId);
+
+	IPluginFunction *callback = pContext->GetFunctionById(params[3]);
+	if (!callback) {
+		pContext->ReportError("Invalid channel webhooks callback function");
+		return 0;
+	}
+
+	try {
+		dpp::snowflake channelFlake = std::stoull(channelId);
+
+		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
+		if (!forward || !forward->AddFunction(callback))
+		{
+			pContext->ReportError("Could not create channel webhooks forward.");
+			return 0;
+		}
+
+		cell_t data = params[4];
+		DiscordWebhook::GetChannelWebhooks(discord, channelFlake, forward, data);
+		return 1;
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid channel ID format: %s", channelId);
+		return 0;
+	}
+}
+
+static cell_t webhook_GetGuildWebhooks(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* guildId;
+	pContext->LocalToString(params[2], &guildId);
+
+	IPluginFunction *callback = pContext->GetFunctionById(params[3]);
+	if (!callback) {
+		pContext->ReportError("Invalid guild webhooks callback function");
+		return 0;
+	}
+
+	try {
+		dpp::snowflake guildFlake = std::stoull(guildId);
+
+		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Array, Param_Cell, Param_Any);
+		if (!forward || !forward->AddFunction(callback))
+		{
+			pContext->ReportError("Could not create guild webhooks forward.");
+			return 0;
+		}
+
+		cell_t data = params[4];
+		DiscordWebhook::GetGuildWebhooks(discord, guildFlake, forward, data);
+		return 1;
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid guild ID format: %s", guildId);
+		return 0;
+	}
+}
+
 static cell_t webhook_CreateWebhook(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* channelId;
+	pContext->LocalToString(params[2], &channelId);
+
+	char* name;
+	pContext->LocalToString(params[3], &name);
+
+	IPluginFunction *callback = pContext->GetFunctionById(params[4]);
+	if (!callback) {
+		pContext->ReportError("Invalid create webhook callback function");
+		return 0;
+	}
+
+	try {
+		dpp::snowflake channelFlake = std::stoull(channelId);
+		dpp::webhook webhook;
+		webhook.name = name;
+		webhook.channel_id = channelFlake;
+
+		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
+		if (!forward || !forward->AddFunction(callback))
+		{
+			pContext->ReportError("Could not create webhook forward.");
+			return 0;
+		}
+
+		cell_t data = params[5];
+		return DiscordWebhook::CreateWebhook(discord, webhook, forward, data);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid channel ID format: %s", channelId);
+		return 0;
+	}
+}
+
+static cell_t webhook_GetWebhook(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* webhookId;
+	pContext->LocalToString(params[2], &webhookId);
+
+	IPluginFunction *callback = pContext->GetFunctionById(params[3]);
+	if (!callback) {
+		pContext->ReportError("Invalid get webhook callback function");
+		return 0;
+	}
+
+	try {
+		dpp::snowflake webhookFlake = std::stoull(webhookId);
+
+		IChangeableForward *forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
+		if (!forward || !forward->AddFunction(callback))
+		{
+			pContext->ReportError("Could not create get webhook forward.");
+			return 0;
+		}
+
+		cell_t data = params[4];
+		return DiscordWebhook::GetWebhook(discord, webhookFlake, forward, data);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid webhook ID format: %s", webhookId);
+		return 0;
+	}
+}
+
+static cell_t webhook_CreateWebhookFromUrl(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* webhook_url;
 	pContext->LocalToString(params[2], &webhook_url);
@@ -6493,7 +8222,7 @@ static cell_t webhook_CreateWebhook(IPluginContext* pContext, const cell_t* para
 	dpp::webhook webhook;
 	try
 	{
-			webhook = dpp::webhook(webhook_url);
+		webhook = dpp::webhook(webhook_url);
 	}
 	catch (const std::exception& e)
 	{
@@ -6520,10 +8249,11 @@ static cell_t webhook_CreateWebhook(IPluginContext* pContext, const cell_t* para
 static cell_t webhook_CreateWebhookFromIdToken(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* webhook_id;
 	pContext->LocalToString(params[2], &webhook_id);
-	
+
 	char* webhook_token;
 	pContext->LocalToString(params[3], &webhook_token);
 
@@ -6553,6 +8283,7 @@ static cell_t webhook_CreateWebhookFromIdToken(IPluginContext* pContext, const c
 static cell_t webhook_FetchWebhook(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* webhookId;
 	pContext->LocalToString(params[2], &webhookId);
@@ -6604,6 +8335,7 @@ static cell_t webhook_FetchWebhook(IPluginContext* pContext, const cell_t* param
 static cell_t webhook_GetId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetId().c_str());
 	return 1;
@@ -6612,9 +8344,10 @@ static cell_t webhook_GetId(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	Handle_t handle = webhook->GetUserHandle();
-	
+
 	if (!handle) {
 		pContext->ReportError("Could not create user handle");
 		return 0;
@@ -6626,6 +8359,7 @@ static cell_t webhook_GetUser(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetName());
 	return 1;
@@ -6634,6 +8368,7 @@ static cell_t webhook_GetName(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_SetName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -6644,6 +8379,7 @@ static cell_t webhook_SetName(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetAvatarUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetAvatarUrl());
 	return 1;
@@ -6652,6 +8388,7 @@ static cell_t webhook_GetAvatarUrl(IPluginContext* pContext, const cell_t* param
 static cell_t webhook_SetAvatarUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	char* avatar_url;
 	pContext->LocalToString(params[2], &avatar_url);
@@ -6662,6 +8399,7 @@ static cell_t webhook_SetAvatarUrl(IPluginContext* pContext, const cell_t* param
 static cell_t webhook_GetAvatarData(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetAvatarData().c_str());
 	return 1;
@@ -6670,6 +8408,7 @@ static cell_t webhook_GetAvatarData(IPluginContext* pContext, const cell_t* para
 static cell_t webhook_SetAvatarData(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	char* avatar_data;
 	pContext->LocalToString(params[2], &avatar_data);
@@ -6680,6 +8419,7 @@ static cell_t webhook_SetAvatarData(IPluginContext* pContext, const cell_t* para
 static cell_t webhook_GetType(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	return static_cast<cell_t>(webhook->GetType());
 }
@@ -6687,6 +8427,7 @@ static cell_t webhook_GetType(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetGuildId().c_str());
 	return 1;
@@ -6695,6 +8436,7 @@ static cell_t webhook_GetGuildId(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetChannelId().c_str());
 	return 1;
@@ -6703,6 +8445,7 @@ static cell_t webhook_GetChannelId(IPluginContext* pContext, const cell_t* param
 static cell_t webhook_GetToken(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetToken());
 	return 1;
@@ -6711,6 +8454,7 @@ static cell_t webhook_GetToken(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetApplicationId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetApplicationId().c_str());
 	return 1;
@@ -6719,6 +8463,7 @@ static cell_t webhook_GetApplicationId(IPluginContext* pContext, const cell_t* p
 static cell_t webhook_GetSourceGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetSourceGuildId().c_str());
 	return 1;
@@ -6727,6 +8472,7 @@ static cell_t webhook_GetSourceGuildId(IPluginContext* pContext, const cell_t* p
 static cell_t webhook_GetSourceChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetSourceChannelId().c_str());
 	return 1;
@@ -6735,6 +8481,7 @@ static cell_t webhook_GetSourceChannelId(IPluginContext* pContext, const cell_t*
 static cell_t webhook_GetUrl(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetUrl());
 	return 1;
@@ -6743,6 +8490,7 @@ static cell_t webhook_GetUrl(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_GetImageData(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	pContext->StringToLocal(params[2], params[3], webhook->GetImageData().c_str());
 	return 1;
@@ -6751,6 +8499,7 @@ static cell_t webhook_GetImageData(IPluginContext* pContext, const cell_t* param
 static cell_t webhook_Modify(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	return webhook->Modify();
 }
@@ -6758,6 +8507,7 @@ static cell_t webhook_Modify(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_Delete(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	return webhook->Delete();
 }
@@ -6765,6 +8515,7 @@ static cell_t webhook_Delete(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_Execute(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	char* message;
 	pContext->LocalToString(params[2], &message);
@@ -6807,11 +8558,13 @@ static cell_t webhook_Execute(IPluginContext* pContext, const cell_t* params)
 static cell_t webhook_ExecuteEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordWebhook* webhook = GetWebhookPointer(pContext, params[1]);
+	if (!webhook) return 0;
 
 	char* message;
 	pContext->LocalToString(params[2], &message);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	int allowed_mentions_mask = params[4];
 
@@ -6851,6 +8604,7 @@ static cell_t webhook_ExecuteEmbed(IPluginContext* pContext, const cell_t* param
 static cell_t interaction_CreateResponse(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -6862,11 +8616,13 @@ static cell_t interaction_CreateResponse(IPluginContext* pContext, const cell_t*
 static cell_t interaction_CreateResponseEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	interaction->CreateResponseEmbed(content, embed);
 	return 1;
@@ -6875,6 +8631,7 @@ static cell_t interaction_CreateResponseEmbed(IPluginContext* pContext, const ce
 static cell_t interaction_GetOptionValue(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -6891,6 +8648,7 @@ static cell_t interaction_GetOptionValue(IPluginContext* pContext, const cell_t*
 static cell_t interaction_GetOptionValueInt(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -6900,12 +8658,38 @@ static cell_t interaction_GetOptionValueInt(IPluginContext* pContext, const cell
 		return 0;
 	}
 
+	// Check if value fits in 32-bit int
+	if (value > INT32_MAX || value < INT32_MIN) {
+		pContext->ReportError("Integer option '%s' value %lld exceeds 32-bit range, data will be truncated. Use GetOptionValueInt64 instead.", name, value);
+		return 0;
+	}
+
 	return static_cast<cell_t>(value);
+}
+
+static cell_t interaction_GetOptionValueInt64(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
+
+	char* name;
+	pContext->LocalToString(params[2], &name);
+
+	int64_t value;
+	if (!interaction->GetOptionValueInt(name, value)) {
+		return 0;
+	}
+
+	char buffer[21];
+	snprintf(buffer, sizeof(buffer), "%lld", value);
+	pContext->StringToLocal(params[3], params[4], buffer);
+	return 1;
 }
 
 static cell_t interaction_GetOptionValueFloat(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -6921,6 +8705,7 @@ static cell_t interaction_GetOptionValueFloat(IPluginContext* pContext, const ce
 static cell_t interaction_GetOptionValueBool(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -6936,6 +8721,7 @@ static cell_t interaction_GetOptionValueBool(IPluginContext* pContext, const cel
 static cell_t interaction_DeferReply(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	interaction->DeferReply(params[2]);
 	return 1;
@@ -6944,6 +8730,7 @@ static cell_t interaction_DeferReply(IPluginContext* pContext, const cell_t* par
 static cell_t interaction_EditResponse(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -6955,6 +8742,7 @@ static cell_t interaction_EditResponse(IPluginContext* pContext, const cell_t* p
 static cell_t interaction_CreateEphemeralResponse(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
@@ -6966,11 +8754,13 @@ static cell_t interaction_CreateEphemeralResponse(IPluginContext* pContext, cons
 static cell_t interaction_CreateEphemeralResponseEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* content;
 	pContext->LocalToString(params[2], &content);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[3]);
+	if (!embed) return 0;
 
 	interaction->CreateEphemeralResponseEmbed(content, embed);
 	return 1;
@@ -6979,6 +8769,7 @@ static cell_t interaction_CreateEphemeralResponseEmbed(IPluginContext* pContext,
 static cell_t interaction_GetCommandName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	const char* commandName = interaction->GetCommandName();
 	pContext->StringToLocal(params[2], params[3], commandName);
@@ -6988,6 +8779,7 @@ static cell_t interaction_GetCommandName(IPluginContext* pContext, const cell_t*
 static cell_t interaction_GetGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	std::string guildId = interaction->GetGuildId();
 	pContext->StringToLocal(params[2], params[3], guildId.c_str());
@@ -6997,6 +8789,7 @@ static cell_t interaction_GetGuildId(IPluginContext* pContext, const cell_t* par
 static cell_t interaction_GetChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	std::string channelId = interaction->GetChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -7006,9 +8799,10 @@ static cell_t interaction_GetChannelId(IPluginContext* pContext, const cell_t* p
 static cell_t interaction_GetUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	Handle_t handle = interaction->GetUserHandle();
-	
+
 	if (!handle) {
 		pContext->ReportError("Could not create user handle");
 		return 0;
@@ -7020,6 +8814,7 @@ static cell_t interaction_GetUser(IPluginContext* pContext, const cell_t* params
 static cell_t interaction_GetUserId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	std::string userId = interaction->GetUserId();
 	pContext->StringToLocal(params[2], params[3], userId.c_str());
@@ -7029,6 +8824,7 @@ static cell_t interaction_GetUserId(IPluginContext* pContext, const cell_t* para
 static cell_t interaction_GetUserName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	const char* userName = interaction->GetUserName();
 	pContext->StringToLocal(params[2], params[3], userName);
@@ -7038,6 +8834,7 @@ static cell_t interaction_GetUserName(IPluginContext* pContext, const cell_t* pa
 static cell_t interaction_GetUserNickname(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordInteraction* interaction = GetInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	pContext->StringToLocal(params[2], params[3], interaction->GetUserNickname().c_str());
 	return 1;
@@ -7046,6 +8843,7 @@ static cell_t interaction_GetUserNickname(IPluginContext* pContext, const cell_t
 static cell_t autocomplete_GetCommandName(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	const char* commandName = interaction->GetCommandName();
 	pContext->StringToLocal(params[2], params[3], commandName);
@@ -7055,6 +8853,7 @@ static cell_t autocomplete_GetCommandName(IPluginContext* pContext, const cell_t
 static cell_t autocomplete_GetGuildId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	std::string guildId = interaction->GetGuildId();
 	pContext->StringToLocal(params[2], params[3], guildId.c_str());
@@ -7064,6 +8863,7 @@ static cell_t autocomplete_GetGuildId(IPluginContext* pContext, const cell_t* pa
 static cell_t autocomplete_GetChannelId(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	std::string channelId = interaction->GetChannelId();
 	pContext->StringToLocal(params[2], params[3], channelId.c_str());
@@ -7073,9 +8873,10 @@ static cell_t autocomplete_GetChannelId(IPluginContext* pContext, const cell_t* 
 static cell_t autocomplete_GetUser(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	Handle_t handle = interaction->GetUserHandle();
-	
+
 	if (!handle) {
 		pContext->ReportError("Could not create user handle");
 		return 0;
@@ -7087,6 +8888,7 @@ static cell_t autocomplete_GetUser(IPluginContext* pContext, const cell_t* param
 static cell_t autocomplete_GetUserNickname(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	pContext->StringToLocal(params[2], params[3], interaction->GetUserNickname().c_str());
 	return 1;
@@ -7095,6 +8897,7 @@ static cell_t autocomplete_GetUserNickname(IPluginContext* pContext, const cell_
 static cell_t autocomplete_GetOptionValue(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -7107,17 +8910,42 @@ static cell_t autocomplete_GetOptionValue(IPluginContext* pContext, const cell_t
 static cell_t autocomplete_GetOptionValueInt(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
 
 	int64_t value = interaction->GetOptionValueInt(name);
+
+	// Check if value fits in 32-bit int
+	if (value > INT32_MAX || value < INT32_MIN) {
+		pContext->ReportError("Integer option '%s' value %lld exceeds 32-bit range, data will be truncated. Use GetOptionValueInt64 instead.", name, value);
+		return 0;
+	}
+
 	return static_cast<cell_t>(value);
+}
+
+static cell_t autocomplete_GetOptionValueInt64(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
+
+	char* name;
+	pContext->LocalToString(params[2], &name);
+
+	int64_t value = interaction->GetOptionValueInt(name);
+
+	char buffer[21];
+	snprintf(buffer, sizeof(buffer), "%lld", value);
+	pContext->StringToLocal(params[3], params[4], buffer);
+	return 1;
 }
 
 static cell_t autocomplete_GetOptionValueFloat(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -7129,6 +8957,7 @@ static cell_t autocomplete_GetOptionValueFloat(IPluginContext* pContext, const c
 static cell_t autocomplete_GetOptionValueBool(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -7140,13 +8969,14 @@ static cell_t autocomplete_GetOptionValueBool(IPluginContext* pContext, const ce
 static cell_t autocomplete_AddAutocompleteChoice(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
 
 	dpp::command_value value;
 	dpp::command_option_type type = static_cast<dpp::command_option_type>(params[3]);
-  
+
 	switch(type) {
 		case dpp::co_string:
 		{
@@ -7170,6 +9000,7 @@ static cell_t autocomplete_AddAutocompleteChoice(IPluginContext* pContext, const
 static cell_t autocomplete_AddAutocompleteChoiceString(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -7189,7 +9020,7 @@ static cell_t httpheaders_HttpHeaders(IPluginContext* pContext, const cell_t* pa
 	HandleError err;
 	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
 	Handle_t handle = handlesys->CreateHandleEx(g_HttpHeadersHandle, headers, &sec, nullptr, &err);
-	
+
 	if (!handle) {
 		delete headers;
 		pContext->ReportError("Failed to create HttpHeaders handle (error %d)", err);
@@ -7202,6 +9033,7 @@ static cell_t httpheaders_HttpHeaders(IPluginContext* pContext, const cell_t* pa
 static cell_t httpheaders_SetHeader(IPluginContext* pContext, const cell_t* params)
 {
 	HttpHeaders* headers = GetHttpHeadersPointer(pContext, params[1]);
+	if (!headers) return 0;
 
 	char* name;
 	char* value;
@@ -7215,6 +9047,7 @@ static cell_t httpheaders_SetHeader(IPluginContext* pContext, const cell_t* para
 static cell_t httpheaders_GetHeader(IPluginContext* pContext, const cell_t* params)
 {
 	HttpHeaders* headers = GetHttpHeadersPointer(pContext, params[1]);
+	if (!headers) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -7230,6 +9063,7 @@ static cell_t httpheaders_GetHeader(IPluginContext* pContext, const cell_t* para
 static cell_t httpheaders_RemoveHeader(IPluginContext* pContext, const cell_t* params)
 {
 	HttpHeaders* headers = GetHttpHeadersPointer(pContext, params[1]);
+	if (!headers) return 0;
 
 	char* name;
 	pContext->LocalToString(params[2], &name);
@@ -7240,6 +9074,7 @@ static cell_t httpheaders_RemoveHeader(IPluginContext* pContext, const cell_t* p
 static cell_t httpheaders_ClearHeaders(IPluginContext* pContext, const cell_t* params)
 {
 	HttpHeaders* headers = GetHttpHeadersPointer(pContext, params[1]);
+	if (!headers) return 0;
 
 	headers->ClearHeaders();
 	return 1;
@@ -7248,6 +9083,7 @@ static cell_t httpheaders_ClearHeaders(IPluginContext* pContext, const cell_t* p
 static cell_t httpheaders_Count(IPluginContext* pContext, const cell_t* params)
 {
 	HttpHeaders* headers = GetHttpHeadersPointer(pContext, params[1]);
+	if (!headers) return 0;
 
 	return static_cast<cell_t>(headers->Count());
 }
@@ -7255,10 +9091,11 @@ static cell_t httpheaders_Count(IPluginContext* pContext, const cell_t* params)
 static cell_t httpheaders_GetHeaderByIndex(IPluginContext* pContext, const cell_t* params)
 {
 	HttpHeaders* headers = GetHttpHeadersPointer(pContext, params[1]);
+	if (!headers) return 0;
 
 	size_t index = static_cast<size_t>(params[2]);
 	std::string name, value;
-	
+
 	if (headers->GetHeaderByIndex(index, name, value)) {
 		pContext->StringToLocalUTF8(params[3], params[4], name.c_str(), nullptr);
 		pContext->StringToLocalUTF8(params[5], params[6], value.c_str(), nullptr);
@@ -7271,6 +9108,7 @@ static cell_t httpheaders_GetHeaderByIndex(IPluginContext* pContext, const cell_
 static cell_t httpcompletion_GetStatus(IPluginContext* pContext, const cell_t* params)
 {
 	HttpCompletion* completion = GetHttpCompletionPointer(pContext, params[1]);
+	if (!completion) return 0;
 
 	return static_cast<cell_t>(completion->GetStatus());
 }
@@ -7278,6 +9116,7 @@ static cell_t httpcompletion_GetStatus(IPluginContext* pContext, const cell_t* p
 static cell_t httpcompletion_GetBody(IPluginContext* pContext, const cell_t* params)
 {
 	HttpCompletion* completion = GetHttpCompletionPointer(pContext, params[1]);
+	if (!completion) return 0;
 
 	pContext->StringToLocalUTF8(params[2], params[3], completion->GetBody().c_str(), nullptr);
 	return 1;
@@ -7286,6 +9125,7 @@ static cell_t httpcompletion_GetBody(IPluginContext* pContext, const cell_t* par
 static cell_t httpcompletion_GetBodyLength(IPluginContext* pContext, const cell_t* params)
 {
 	HttpCompletion* completion = GetHttpCompletionPointer(pContext, params[1]);
+	if (!completion) return 0;
 
 	return static_cast<cell_t>(completion->GetBodyLength());
 }
@@ -7293,6 +9133,7 @@ static cell_t httpcompletion_GetBodyLength(IPluginContext* pContext, const cell_
 static cell_t httpcompletion_GetResponseHeaders(IPluginContext* pContext, const cell_t* params)
 {
 	HttpCompletion* completion = GetHttpCompletionPointer(pContext, params[1]);
+	if (!completion) return 0;
 
 	// Check if we already created the ResponseHeaders handle
 	Handle_t existingHandle = completion->GetResponseHeadersHandle();
@@ -7308,7 +9149,7 @@ static cell_t httpcompletion_GetResponseHeaders(IPluginContext* pContext, const 
 	HandleError err;
 	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
 	Handle_t handle = handlesys->CreateHandleEx(g_HttpHeadersHandle, headers, &sec, nullptr, &err);
-	
+
 	if (!handle) {
 		delete headers;
 		pContext->ReportError("Failed to create HttpHeaders handle (error %d)", err);
@@ -7324,6 +9165,7 @@ static cell_t httpcompletion_GetResponseHeaders(IPluginContext* pContext, const 
 static cell_t httpcompletion_GetProtocol(IPluginContext* pContext, const cell_t* params)
 {
 	HttpCompletion* completion = GetHttpCompletionPointer(pContext, params[1]);
+	if (!completion) return 0;
 
 	pContext->StringToLocalUTF8(params[2], params[3], completion->GetProtocol().c_str(), nullptr);
 	return 1;
@@ -7332,6 +9174,7 @@ static cell_t httpcompletion_GetProtocol(IPluginContext* pContext, const cell_t*
 static cell_t httpcompletion_IsSuccess(IPluginContext* pContext, const cell_t* params)
 {
 	HttpCompletion* completion = GetHttpCompletionPointer(pContext, params[1]);
+	if (!completion) return 0;
 
 	return completion->IsSuccess();
 }
@@ -7340,6 +9183,7 @@ static cell_t httpcompletion_IsSuccess(IPluginContext* pContext, const cell_t* p
 static cell_t discord_HttpRequest(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	if (!discord->IsRunning()) {
 		pContext->ReportError("Bot instance not running, unable to send request");
@@ -7348,20 +9192,20 @@ static cell_t discord_HttpRequest(IPluginContext* pContext, const cell_t* params
 
 	char* url;
 	pContext->LocalToString(params[2], &url);
-	
+
 	dpp::http_method method = static_cast<dpp::http_method>(params[3]);
-	
+
 	IPluginFunction* callback = pContext->GetFunctionById(params[4]);
 	if (!callback) {
 		pContext->ReportError("Invalid callback function");
 		return 0;
 	}
-	
+
 	char* body = nullptr;
 	if (params[0] >= 5) {
 		pContext->LocalToString(params[5], &body);
 	}
-	
+
 	char* content_type = nullptr;
 	if (params[0] >= 6) {
 		pContext->LocalToString(params[6], &content_type);
@@ -7378,7 +9222,7 @@ static cell_t discord_HttpRequest(IPluginContext* pContext, const cell_t* params
 	}
 
 	cell_t data = params[9];
-	
+
 	// Create forward for callback with HttpCompletion parameter
 	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_Any);
 	if (!forward) {
@@ -7386,50 +9230,50 @@ static cell_t discord_HttpRequest(IPluginContext* pContext, const cell_t* params
 		return 0;
 	}
 	forward->AddFunction(callback);
-	
+
 	// Check if there are listeners before making the request
 	if (!forward || !forward->GetFunctionCount()) {
 		forwards->ReleaseForward(forward);
 		return 0;
 	}
-	
+
 	std::string request_body = body ? body : "";
 	std::string mime_type = content_type ? content_type : "application/json";
 	std::string http_protocol = protocol ? protocol : "1.1";
 	dpp::http_headers dpp_headers;
-	
+
 	if (headers) {
 		dpp_headers = headers->ToDppHeaders();
 	}
-	
+
 	try {
 		discord->GetCluster()->request(url, method, [forward, data, http_protocol](const dpp::http_request_completion_t& completion) {
 			g_TaskQueue.Push([forward, completion, data, http_protocol]() {
 				HandleError err;
 				HandleSecurity sec(nullptr, myself->GetIdentity());
-				
+
 				// Create HttpCompletion object
 				HttpCompletion* httpCompletion = new HttpCompletion(completion, http_protocol);
 				Handle_t completionHandle = handlesys->CreateHandleEx(g_HttpCompletionHandle, httpCompletion, &sec, nullptr, &err);
-				
+
 				if (completionHandle) {
 					forward->PushCell(completionHandle);
 					forward->PushCell(data);
 					forward->Execute(nullptr);
-					
+
 					// Automatically free the handle after callback execution
 					handlesys->FreeHandle(completionHandle, &sec);
 				} else {
 					// If handle creation failed, clean up the object manually
 					delete httpCompletion;
 				}
-				
+
 				if (forward) {
 					forwards->ReleaseForward(forward);
 				}
 			});
 		}, request_body, mime_type, dpp_headers, http_protocol);
-		
+
 		return 1;
 	}
 	catch (const std::exception& e) {
@@ -7442,6 +9286,7 @@ static cell_t discord_HttpRequest(IPluginContext* pContext, const cell_t* params
 static cell_t autocomplete_CreateAutocompleteResponse(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordAutocompleteInteraction* interaction = GetAutocompleteInteractionPointer(pContext, params[1]);
+	if (!interaction) return 0;
 
 	if (!interaction->m_client) {
 		return 0;
@@ -7513,9 +9358,32 @@ bool DiscordClient::DeleteMessage(dpp::snowflake channel_id, dpp::snowflake mess
 	}
 }
 
+bool DiscordClient::DeleteMessageBulk(dpp::snowflake channel_id, const std::vector<dpp::snowflake>& message_ids)
+{
+	if (!IsRunning()) {
+		return false;
+	}
+
+	// Discord API requires at least 2 and at most 100 messages
+	if (message_ids.size() < 2 || message_ids.size() > 100) {
+		smutils->LogError(myself, "Bulk delete requires between 2 and 100 message IDs (got %zu)", message_ids.size());
+		return false;
+	}
+
+	try {
+		m_cluster->message_delete_bulk(message_ids, channel_id);
+		return true;
+	}
+	catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to bulk delete messages: %s", e.what());
+		return false;
+	}
+}
+
 static cell_t discord_EditMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -7540,6 +9408,7 @@ static cell_t discord_EditMessage(IPluginContext* pContext, const cell_t* params
 static cell_t discord_EditMessageEmbed(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -7551,6 +9420,7 @@ static cell_t discord_EditMessageEmbed(IPluginContext* pContext, const cell_t* p
 	pContext->LocalToString(params[4], &content);
 
 	DiscordEmbed* embed = GetEmbedPointer(pContext, params[5]);
+	if (!embed) return 0;
 
 	try {
 		dpp::snowflake channel = std::stoull(channelId);
@@ -7566,6 +9436,7 @@ static cell_t discord_EditMessageEmbed(IPluginContext* pContext, const cell_t* p
 static cell_t discord_DeleteMessage(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* channelId;
 	pContext->LocalToString(params[2], &channelId);
@@ -7580,6 +9451,44 @@ static cell_t discord_DeleteMessage(IPluginContext* pContext, const cell_t* para
 	}
 	catch (const std::exception& e) {
 		pContext->ReportError("Invalid ID format");
+		return 0;
+	}
+}
+
+static cell_t discord_DeleteMessageBulk(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* channelId;
+	pContext->LocalToString(params[2], &channelId);
+
+	cell_t* messageIds;
+	pContext->LocalToPhysAddr(params[3], &messageIds);
+	
+	unsigned int count = params[4];
+
+	if (count < 2 || count > 100) {
+		pContext->ReportError("Bulk delete requires between 2 and 100 message IDs (got %u)", count);
+		return 0;
+	}
+
+	try {
+		dpp::snowflake channel = std::stoull(channelId);
+		
+		std::vector<dpp::snowflake> message_vec;
+		message_vec.reserve(count);
+		
+		for (unsigned int i = 0; i < count; i++) {
+			char* msgId;
+			pContext->LocalToString(messageIds[i], &msgId);
+			message_vec.push_back(std::stoull(msgId));
+		}
+		
+		return discord->DeleteMessageBulk(channel, message_vec);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid ID format: %s", e.what());
 		return 0;
 	}
 }
@@ -7680,9 +9589,100 @@ bool DiscordClient::BulkDeleteGlobalCommands()
 	}
 }
 
+static cell_t discord_GetGuildCount(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	return discord->GetGuildCount();
+}
+
+static cell_t discord_CreateRole(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* guildId;
+	pContext->LocalToString(params[2], &guildId);
+
+	char* name;
+	pContext->LocalToString(params[3], &name);
+
+	uint32_t color = params[4];
+	bool hoist = params[5] != 0;
+	bool mentionable = params[6] != 0;
+
+	char* permissionsStr;
+	pContext->LocalToString(params[7], &permissionsStr);
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[8]);
+	if (!callback) {
+		pContext->ReportError("Invalid create role callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
+	if (!forward || !forward->AddFunction(callback))
+	{
+		pContext->ReportError("Could not create role from object forward.");
+		return 0;
+	}
+
+	cell_t data = params[9];
+
+	try {
+		dpp::snowflake guild = std::stoull(guildId);
+		uint64_t permissions = std::stoull(permissionsStr);
+		return discord->CreateRole(guild, name, color, hoist, mentionable, permissions, forward, data);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid guild ID or permissions format");
+		forwards->ReleaseForward(forward);
+		return 0;
+	}
+}
+
+static cell_t discord_CreateRoleFromObject(IPluginContext* pContext, const cell_t* params)
+{
+	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
+
+	char* guildId;
+	pContext->LocalToString(params[2], &guildId);
+
+	DiscordRole* role = GetRolePointer(pContext, params[3]);
+	if (!role) return 0;
+
+	IPluginFunction* callback = pContext->GetFunctionById(params[4]);
+	if (!callback) {
+		pContext->ReportError("Invalid create role from object callback function");
+		return 0;
+	}
+
+	IChangeableForward* forward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Any);
+	if (!forward || !forward->AddFunction(callback))
+	{
+		pContext->ReportError("Could not create role from object forward.");
+		return 0;
+	}
+
+	cell_t data = params[5];
+
+	try {
+		dpp::snowflake guild = std::stoull(guildId);
+		return discord->CreateRoleFromObject(guild, role, forward, data);
+	}
+	catch (const std::exception& e) {
+		pContext->ReportError("Invalid guild ID format");
+		forwards->ReleaseForward(forward);
+		return 0;
+	}
+}
+
 static cell_t discord_DeleteGuildCommand(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* guildId;
 	pContext->LocalToString(params[2], &guildId);
@@ -7704,6 +9704,7 @@ static cell_t discord_DeleteGuildCommand(IPluginContext* pContext, const cell_t*
 static cell_t discord_DeleteGlobalCommand(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* commandId;
 	pContext->LocalToString(params[2], &commandId);
@@ -7721,6 +9722,7 @@ static cell_t discord_DeleteGlobalCommand(IPluginContext* pContext, const cell_t
 static cell_t discord_BulkDeleteGuildCommands(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	char* guildId;
 	pContext->LocalToString(params[2], &guildId);
@@ -7738,6 +9740,7 @@ static cell_t discord_BulkDeleteGuildCommands(IPluginContext* pContext, const ce
 static cell_t discord_BulkDeleteGlobalCommands(IPluginContext* pContext, const cell_t* params)
 {
 	DiscordClient* discord = GetDiscordPointer(pContext, params[1]);
+	if (!discord) return 0;
 
 	try {
 		return discord->BulkDeleteGlobalCommands();
@@ -7750,7 +9753,7 @@ static cell_t discord_BulkDeleteGlobalCommands(IPluginContext* pContext, const c
 
 bool DiscordClient::ModifyChannel(dpp::snowflake channel_id, const std::string& name, const std::string& topic, uint16_t position, bool nsfw, uint16_t rate_limit, uint16_t bitrate, uint8_t user_limit, dpp::snowflake parent_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		dpp::channel ch;
 		ch.id = channel_id;
@@ -7773,7 +9776,7 @@ bool DiscordClient::ModifyChannel(dpp::snowflake channel_id, const std::string& 
 
 bool DiscordClient::DeleteChannel(dpp::snowflake channel_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->channel_delete(channel_id);
 		return true;
@@ -7786,7 +9789,7 @@ bool DiscordClient::DeleteChannel(dpp::snowflake channel_id) {
 
 bool DiscordClient::PinMessage(dpp::snowflake channel_id, dpp::snowflake message_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->message_pin(channel_id, message_id);
 		return true;
@@ -7799,7 +9802,7 @@ bool DiscordClient::PinMessage(dpp::snowflake channel_id, dpp::snowflake message
 
 bool DiscordClient::UnpinMessage(dpp::snowflake channel_id, dpp::snowflake message_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->message_unpin(channel_id, message_id);
 		return true;
@@ -7812,7 +9815,7 @@ bool DiscordClient::UnpinMessage(dpp::snowflake channel_id, dpp::snowflake messa
 
 bool DiscordClient::AddReaction(dpp::snowflake channel_id, dpp::snowflake message_id, const char* emoji) {
 	if (!IsRunning() || !emoji) return false;
-	
+
 	try {
 		m_cluster->message_add_reaction(message_id, channel_id, emoji);
 		return true;
@@ -7825,7 +9828,7 @@ bool DiscordClient::AddReaction(dpp::snowflake channel_id, dpp::snowflake messag
 
 bool DiscordClient::RemoveReaction(dpp::snowflake channel_id, dpp::snowflake message_id, const char* emoji) {
 	if (!IsRunning() || !emoji) return false;
-	
+
 	try {
 		m_cluster->message_delete_reaction(message_id, channel_id, 0, emoji);
 		return true;
@@ -7838,7 +9841,7 @@ bool DiscordClient::RemoveReaction(dpp::snowflake channel_id, dpp::snowflake mes
 
 bool DiscordClient::RemoveAllReactions(dpp::snowflake channel_id, dpp::snowflake message_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->message_delete_all_reactions(message_id, channel_id);
 		return true;
@@ -7851,7 +9854,7 @@ bool DiscordClient::RemoveAllReactions(dpp::snowflake channel_id, dpp::snowflake
 
 bool DiscordClient::ModifyRole(dpp::snowflake guild_id, dpp::snowflake role_id, const std::string& name, uint32_t color, bool hoist, bool mentionable, uint64_t permissions) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		dpp::role role;
 		role.id = role_id;
@@ -7871,7 +9874,7 @@ bool DiscordClient::ModifyRole(dpp::snowflake guild_id, dpp::snowflake role_id, 
 
 bool DiscordClient::DeleteRole(dpp::snowflake guild_id, dpp::snowflake role_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->role_delete(guild_id, role_id);
 		return true;
@@ -7884,7 +9887,7 @@ bool DiscordClient::DeleteRole(dpp::snowflake guild_id, dpp::snowflake role_id) 
 
 bool DiscordClient::ModifyMember(dpp::snowflake guild_id, dpp::snowflake user_id, const std::string& nickname) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		dpp::guild_member member;
 		member.guild_id = guild_id;
@@ -7901,7 +9904,7 @@ bool DiscordClient::ModifyMember(dpp::snowflake guild_id, dpp::snowflake user_id
 
 bool DiscordClient::ModifyWebhook(dpp::snowflake webhook_id, const std::string& name, const std::string& avatar_url) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		dpp::webhook webhook;
 		webhook.id = webhook_id;
@@ -7918,7 +9921,7 @@ bool DiscordClient::ModifyWebhook(dpp::snowflake webhook_id, const std::string& 
 
 bool DiscordClient::DeleteWebhook(dpp::snowflake webhook_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->delete_webhook(webhook_id);
 		return true;
@@ -7931,7 +9934,7 @@ bool DiscordClient::DeleteWebhook(dpp::snowflake webhook_id) {
 
 bool DiscordClient::LeaveGuild(dpp::snowflake guild_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->guild_delete(guild_id);
 		return true;
@@ -7944,7 +9947,7 @@ bool DiscordClient::LeaveGuild(dpp::snowflake guild_id) {
 
 bool DiscordClient::CreateChannel(dpp::snowflake guild_id, const char* name, dpp::channel_type type, const char* topic, dpp::snowflake parent_id, IForward* callback_forward, cell_t data) {
 	if (!IsRunning() || !name) return false;
-	
+
 	try {
 		dpp::channel channel;
 		channel.guild_id = guild_id;
@@ -7952,7 +9955,7 @@ bool DiscordClient::CreateChannel(dpp::snowflake guild_id, const char* name, dpp
 		channel.set_type(type);
 		if (topic && strlen(topic) > 0) channel.topic = topic;
 		if (parent_id > 0) channel.parent_id = parent_id;
-		
+
 		if (callback_forward) {
 			m_cluster->channel_create(channel, [this, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback) {
 				if (callback.is_error()) {
@@ -7961,7 +9964,7 @@ bool DiscordClient::CreateChannel(dpp::snowflake guild_id, const char* name, dpp
 					return;
 				}
 				auto ch = callback.get<dpp::channel>();
-				
+
 				g_TaskQueue.Push([this, forward, ch = callback.get<dpp::channel>(), value]() {
 					DiscordChannel* discord_channel = new DiscordChannel(ch, this);
 					if (!forward || !forward->GetFunctionCount()) {
@@ -7969,7 +9972,7 @@ bool DiscordClient::CreateChannel(dpp::snowflake guild_id, const char* name, dpp
 						forwards->ReleaseForward(forward);
 						return;
 					}
-					
+
 					HandleError err;
 					HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
 					Handle_t channelHandle = handlesys->CreateHandleEx(g_DiscordChannelHandle, discord_channel, &sec, nullptr, &err);
@@ -7979,12 +9982,12 @@ bool DiscordClient::CreateChannel(dpp::snowflake guild_id, const char* name, dpp
 						forwards->ReleaseForward(forward);
 						return;
 					}
-					
+
 					forward->PushCell(m_discord_handle);
 					forward->PushCell(channelHandle);
 					forward->PushCell(value);
 					forward->Execute(nullptr);
-					
+
 					handlesys->FreeHandle(channelHandle, &sec);
 					forwards->ReleaseForward(forward);
 				});
@@ -8000,9 +10003,26 @@ bool DiscordClient::CreateChannel(dpp::snowflake guild_id, const char* name, dpp
 	}
 }
 
+// Get guild count from cache
+int DiscordClient::GetGuildCount() const {
+	if (!m_cluster) return 0;
+
+	// Count guilds in cache
+	int count = 0;
+	dpp::cache<dpp::guild>* guild_cache = dpp::get_guild_cache();
+	if (guild_cache) {
+		// Iterate through cached guilds
+		auto guilds = guild_cache->get_container();
+		for (const auto& [id, guild_ptr] : guilds) {
+			if (guild_ptr) count++;
+		}
+	}
+	return count;
+}
+
 bool DiscordClient::CreateRole(dpp::snowflake guild_id, const char* name, uint32_t color, bool hoist, bool mentionable, uint64_t permissions, IForward* callback_forward, cell_t data) {
 	if (!IsRunning() || !name) return false;
-	
+
 	try {
 		dpp::role role;
 		role.guild_id = guild_id;
@@ -8010,7 +10030,7 @@ bool DiscordClient::CreateRole(dpp::snowflake guild_id, const char* name, uint32
 		role.colour = color;
 		role.flags = (hoist ? dpp::r_hoist : 0) | (mentionable ? dpp::r_mentionable : 0);
 		role.permissions = permissions;
-		
+
 		if (callback_forward) {
 			m_cluster->role_create(role, [this, forward = callback_forward, value = data](const dpp::confirmation_callback_t& callback) {
 				if (callback.is_error()) {
@@ -8019,19 +10039,21 @@ bool DiscordClient::CreateRole(dpp::snowflake guild_id, const char* name, uint32
 					return;
 				}
 				auto r = callback.get<dpp::role>();
-				
-				g_TaskQueue.Push([this, forward, role_id = r.id, value = value]() {
-					if (!forward || !forward->GetFunctionCount()) {
-						return;
-					}
-					
-					forward->PushCell(m_discord_handle);
-					forward->PushString(std::to_string(role_id).c_str());
-					forward->PushCell(value);
-					forward->Execute(nullptr);
-					
+
+			g_TaskQueue.Push([this, forward, role_id = r.id, value = value]() {
+				if (!forward || !forward->GetFunctionCount()) {
 					forwards->ReleaseForward(forward);
-				});
+					return;
+				}
+
+				std::string role_id_str = std::to_string(role_id);
+				forward->PushCell(m_discord_handle);
+				forward->PushString(role_id_str.c_str());
+				forward->PushCell(value);
+				forward->Execute(nullptr);
+
+				forwards->ReleaseForward(forward);
+			});
 			});
 		} else {
 			m_cluster->role_create(role);
@@ -8044,9 +10066,66 @@ bool DiscordClient::CreateRole(dpp::snowflake guild_id, const char* name, uint32
 	}
 }
 
+bool DiscordClient::CreateRoleFromObject(dpp::snowflake guild_id, const DiscordRole* role_obj, IForward* callback_forward, cell_t data) {
+	if (!IsRunning() || !role_obj) return false;
+
+	try {
+		dpp::role role = role_obj->GetDPPRole();
+		role.guild_id = guild_id;
+		role.id = 0; // Clear ID for new role creation
+
+		if (callback_forward) {
+			m_cluster->role_create(role, [this, forward = callback_forward, value = data, guild_id](const dpp::confirmation_callback_t& callback) {
+				if (callback.is_error()) {
+					smutils->LogError(myself, "Failed to create role in guild %llu: %s (code: %d)", 
+						guild_id, callback.get_error().message.c_str(), callback.get_error().code);
+					forwards->ReleaseForward(forward);
+					return;
+				}
+				auto r = callback.get<dpp::role>();
+
+				g_TaskQueue.Push([this, forward, new_role = r, value = value]() {
+					if (!forward || !forward->GetFunctionCount()) {
+						forwards->ReleaseForward(forward);
+						return;
+					}
+
+					// Create DiscordRole object
+					DiscordRole* role_obj = new DiscordRole(new_role, new_role.guild_id, this);
+					HandleError err;
+					HandleSecurity sec(myself->GetIdentity(), myself->GetIdentity());
+					Handle_t roleHandle = handlesys->CreateHandleEx(g_DiscordRoleHandle, role_obj, &sec, nullptr, &err);
+
+					if (!roleHandle) {
+						smutils->LogError(myself, "Could not create role handle (error %d)", err);
+						delete role_obj;
+						forwards->ReleaseForward(forward);
+						return;
+					}
+
+					forward->PushCell(m_discord_handle);
+					forward->PushCell(roleHandle);
+					forward->PushCell(value);
+					forward->Execute(nullptr);
+
+					handlesys->FreeHandle(roleHandle, &sec);
+					forwards->ReleaseForward(forward);
+				});
+			});
+		} else {
+			m_cluster->role_create(role);
+		}
+		return true;
+	}
+	catch (const std::exception& e) {
+		smutils->LogError(myself, "Failed to create role from object: %s", e.what());
+		return false;
+	}
+}
+
 bool DiscordClient::AddMemberRole(dpp::snowflake guild_id, dpp::snowflake user_id, dpp::snowflake role_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->guild_member_add_role(guild_id, user_id, role_id);
 		return true;
@@ -8059,7 +10138,7 @@ bool DiscordClient::AddMemberRole(dpp::snowflake guild_id, dpp::snowflake user_i
 
 bool DiscordClient::RemoveMemberRole(dpp::snowflake guild_id, dpp::snowflake user_id, dpp::snowflake role_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->guild_member_remove_role(guild_id, user_id, role_id);
 		return true;
@@ -8072,7 +10151,7 @@ bool DiscordClient::RemoveMemberRole(dpp::snowflake guild_id, dpp::snowflake use
 
 bool DiscordClient::KickMember(dpp::snowflake guild_id, dpp::snowflake user_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->guild_member_kick(guild_id, user_id);
 		return true;
@@ -8085,7 +10164,7 @@ bool DiscordClient::KickMember(dpp::snowflake guild_id, dpp::snowflake user_id) 
 
 bool DiscordClient::BanMember(dpp::snowflake guild_id, dpp::snowflake user_id, const char* reason, int delete_message_days) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->guild_ban_add(guild_id, user_id, delete_message_days);
 		return true;
@@ -8098,7 +10177,7 @@ bool DiscordClient::BanMember(dpp::snowflake guild_id, dpp::snowflake user_id, c
 
 bool DiscordClient::UnbanMember(dpp::snowflake guild_id, dpp::snowflake user_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		m_cluster->guild_ban_delete(guild_id, user_id);
 		return true;
@@ -8111,7 +10190,7 @@ bool DiscordClient::UnbanMember(dpp::snowflake guild_id, dpp::snowflake user_id)
 
 bool DiscordClient::TimeoutMember(dpp::snowflake guild_id, dpp::snowflake user_id, time_t timeout_until) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		dpp::guild_member member;
 		member.guild_id = guild_id;
@@ -8128,7 +10207,7 @@ bool DiscordClient::TimeoutMember(dpp::snowflake guild_id, dpp::snowflake user_i
 
 bool DiscordClient::RemoveTimeout(dpp::snowflake guild_id, dpp::snowflake user_id) {
 	if (!IsRunning()) return false;
-	
+
 	try {
 		dpp::guild_member member;
 		member.guild_id = guild_id;
@@ -8148,7 +10227,7 @@ bool DiscordClient::IsRunning() const
 	if (!m_cluster) {
 		return false;
 	}
-	
+
 	try {
 		const auto& shards = m_cluster->get_shards();
 		for (const auto& shard_pair : shards) {
@@ -8163,12 +10242,27 @@ bool DiscordClient::IsRunning() const
 	}
 }
 
+void DiscordClient::SendClosePacket()
+{	
+	const auto& shards = m_cluster->get_shards();
+	for (const auto& shard_pair : shards) {
+		auto* discord_client = shard_pair.second;
+		if (discord_client && discord_client->is_connected()) {
+			try {
+				discord_client->send_close_packet();
+			} catch (const std::exception& e) {
+				smutils->LogError(myself, "Error sending close packet to shard %u: %s", shard_pair.first, e.what());
+			}
+		}
+	}
+}
+
 uint64_t DiscordClient::GetUptime() const
 {
 	if (!IsRunning()) {
 		return 0;
 	}
-	
+
 	try {
 		return m_cluster->uptime().to_secs();
 	} catch (const std::exception& e) {
@@ -8182,18 +10276,18 @@ Handle_t DiscordMessage::GetAuthorHandle() const
 	if (m_authorHandle) {
 		return m_authorHandle;
 	}
-	
+
 	DiscordUser* pDiscordUser = this->GetAuthor();
-	
+
 	HandleError err;
 	HandleSecurity sec(nullptr, myself->GetIdentity());
 	m_authorHandle = handlesys->CreateHandleEx(g_DiscordUserHandle, pDiscordUser, &sec, nullptr, &err);
-	
+
 	if (!m_authorHandle) {
 		delete pDiscordUser;
 		return 0;
 	}
-	
+
 	return m_authorHandle;
 }
 
@@ -8202,18 +10296,18 @@ Handle_t DiscordInteraction::GetUserHandle() const
 	if (m_userHandle) {
 		return m_userHandle;
 	}
-	
+
 	DiscordUser* pDiscordUser = this->GetUser();
-	
+
 	HandleError err;
 	HandleSecurity sec(nullptr, myself->GetIdentity());
 	m_userHandle = handlesys->CreateHandleEx(g_DiscordUserHandle, pDiscordUser, &sec, nullptr, &err);
-	
+
 	if (!m_userHandle) {
 		delete pDiscordUser;
 		return 0;
 	}
-	
+
 	return m_userHandle;
 }
 
@@ -8222,18 +10316,18 @@ Handle_t DiscordAutocompleteInteraction::GetUserHandle() const
 	if (m_userHandle) {
 		return m_userHandle;
 	}
-	
+
 	DiscordUser* pDiscordUser = this->GetUser();
-	
+
 	HandleError err;
 	HandleSecurity sec(nullptr, myself->GetIdentity());
 	m_userHandle = handlesys->CreateHandleEx(g_DiscordUserHandle, pDiscordUser, &sec, nullptr, &err);
-	
+
 	if (!m_userHandle) {
 		delete pDiscordUser;
 		return 0;
 	}
-	
+
 	return m_userHandle;
 }
 
@@ -8242,18 +10336,18 @@ Handle_t DiscordWebhook::GetUserHandle() const
 	if (m_userHandle) {
 		return m_userHandle;
 	}
-	
+
 	DiscordUser* pDiscordUser = this->GetUser();
-	
+
 	HandleError err;
 	HandleSecurity sec(nullptr, myself->GetIdentity());
 	m_userHandle = handlesys->CreateHandleEx(g_DiscordUserHandle, pDiscordUser, &sec, nullptr, &err);
-	
+
 	if (!m_userHandle) {
 		delete pDiscordUser;
 		return 0;
 	}
-	
+
 	return m_userHandle;
 }
 
@@ -8276,15 +10370,21 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"Discord.EditMessage", discord_EditMessage},
 	{"Discord.EditMessageEmbed", discord_EditMessageEmbed},
 	{"Discord.DeleteMessage", discord_DeleteMessage},
+	{"Discord.DeleteMessageBulk", discord_DeleteMessageBulk},
+	{"Discord.GuildCount.get", discord_GetGuildCount},
+	{"Discord.CreateRole", discord_CreateRole},
+	{"Discord.CreateRoleFromObject", discord_CreateRoleFromObject},
 	{"Discord.DeleteGuildCommand", discord_DeleteGuildCommand},
 	{"Discord.DeleteGlobalCommand", discord_DeleteGlobalCommand},
 	{"Discord.BulkDeleteGuildCommands", discord_BulkDeleteGuildCommands},
 	{"Discord.BulkDeleteGlobalCommands", discord_BulkDeleteGlobalCommands},
 	{"Discord.SetReadyCallback", discord_SetReadyCallback},
+	{"Discord.SetResumedCallback", discord_SetResumedCallback},
 	{"Discord.SetMessageCallback", discord_SetMessageCallback},
 	{"Discord.SetLogCallback", discord_SetLogCallback},
 	{"Discord.SetSlashCommandCallback", discord_SetSlashCommandCallback},
 	{"Discord.SetAutocompleteCallback", discord_SetAutocompleteCallback},
+	{"Discord.SetShutdownCallback", discord_SetShutdownCallback},
 	{"Discord.HttpRequest", discord_HttpRequest},
 
 	// HttpHeaders
@@ -8309,8 +10409,10 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordUser.FetchUser", user_FetchUser},
 	{"DiscordUser.FindUser", user_FindUser},
 	{"DiscordUser.GetId", user_GetId},
+	{"DiscordUser.GetClient", user_GetClient},
+	{"DiscordUser.GetGuildId", user_GetGuildId},
 	{"DiscordUser.GetUserName", user_GetUserName},
-	{"DiscordUser.GetDiscriminator.get", user_GetDiscriminator},
+	{"DiscordUser.Discriminator.get", user_GetDiscriminator},
 	{"DiscordUser.GetGlobalName", user_GetGlobalName},
 	{"DiscordUser.GetAvatarUrl", user_GetAvatarUrl},
 	{"DiscordUser.GetDefaultAvatarUrl", user_GetDefaultAvatarUrl},
@@ -8320,28 +10422,6 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordUser.GetFormattedUsername", user_GetFormattedUsername},
 	{"DiscordUser.Flags.get", user_GetFlags},
 	{"DiscordUser.HasFlag", user_HasFlag},
-	{"DiscordUser.IsSystem.get", user_IsSystem},
-	{"DiscordUser.IsMfaEnabled.get", user_IsMfaEnabled},
-	{"DiscordUser.IsVerified.get", user_IsVerified},
-	{"DiscordUser.HasNitroFull.get", user_HasNitroFull},
-	{"DiscordUser.HasNitroClassic.get", user_HasNitroClassic},
-	{"DiscordUser.HasNitroBasic.get", user_HasNitroBasic},
-	{"DiscordUser.IsDiscordEmployee.get", user_IsDiscordEmployee},
-	{"DiscordUser.IsPartneredOwner.get", user_IsPartneredOwner},
-	{"DiscordUser.HasHypesquadEvents.get", user_HasHypesquadEvents},
-	{"DiscordUser.IsBughunter1.get", user_IsBughunter1},
-	{"DiscordUser.IsHouseBravery.get", user_IsHouseBravery},
-	{"DiscordUser.IsHouseBrilliance.get", user_IsHouseBrilliance},
-	{"DiscordUser.IsHouseBalance.get", user_IsHouseBalance},
-	{"DiscordUser.IsEarlySupporter.get", user_IsEarlySupporter},
-	{"DiscordUser.IsTeamUser.get", user_IsTeamUser},
-	{"DiscordUser.IsBughunter2.get", user_IsBughunter2},
-	{"DiscordUser.IsVerifiedBot.get", user_IsVerifiedBot},
-	{"DiscordUser.IsVerifiedBotDev.get", user_IsVerifiedBotDev},
-	{"DiscordUser.IsCertifiedModerator.get", user_IsCertifiedModerator},
-	{"DiscordUser.IsBotHttpInteractions.get", user_IsBotHttpInteractions},
-	{"DiscordUser.HasAnimatedIcon.get", user_HasAnimatedIcon},
-	{"DiscordUser.IsActiveDeveloper.get", user_IsActiveDeveloper},
 	{"DiscordUser.IsBot.get", user_IsBot},
 	{"DiscordUser.HasGuildMember.get", user_HasGuildMember},
 	{"DiscordUser.GetNickName", user_GetNickName},
@@ -8382,7 +10462,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordGuild.IsPartnered.get", guild_IsPartnered},
 	{"DiscordGuild.GetIconUrl", guild_GetIconUrl},
 	{"DiscordGuild.GetBannerUrl", guild_GetBannerUrl},
-	
+
 	// Additional DiscordGuild methods
 	{"DiscordGuild.GetSplashUrl", guild_GetSplashUrl},
 	{"DiscordGuild.GetDiscoverySplashUrl", guild_GetDiscoverySplashUrl},
@@ -8398,14 +10478,16 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordGuild.ShardId.get", guild_GetShardId},
 	{"DiscordGuild.Flags.get", guild_GetFlags},
 	{"DiscordGuild.FlagsExtra.get", guild_GetFlagsExtra},
-	
+	{"DiscordGuild.GetInvites", guild_GetInvites},
+	{"DiscordGuild.GetWebhooks", guild_GetWebhooks},
+
 	// Channel ID getters
 	{"DiscordGuild.GetAfkChannelId", guild_GetAfkChannelId},
 	{"DiscordGuild.GetSystemChannelId", guild_GetSystemChannelId},
 	{"DiscordGuild.GetRulesChannelId", guild_GetRulesChannelId},
 	{"DiscordGuild.GetPublicUpdatesChannelId", guild_GetPublicUpdatesChannelId},
 	{"DiscordGuild.GetSafetyAlertsChannelId", guild_GetSafetyAlertsChannelId},
-	
+
 	// Additional guild flag properties
 	{"DiscordGuild.IsUnavailable.get", guild_IsUnavailable},
 	{"DiscordGuild.WidgetEnabled.get", guild_WidgetEnabled},
@@ -8439,7 +10521,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordGuild.HasSupportServer.get", guild_HasSupportServer},
 	{"DiscordGuild.HasRoleSubscriptionsAvailableForPurchase.get", guild_HasRoleSubscriptionsAvailableForPurchase},
 	{"DiscordGuild.HasRaidAlertsDisabled.get", guild_HasRaidAlertsDisabled},
-	
+
 	// Notification settings
 	{"DiscordGuild.NoJoinNotifications.get", guild_NoJoinNotifications},
 	{"DiscordGuild.NoBoostNotifications.get", guild_NoBoostNotifications},
@@ -8452,13 +10534,74 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordGuild.HasPermission", guild_HasPermission},
 	{"DiscordGuild.HasPermissionInChannel", guild_HasPermissionInChannel},
 	{"DiscordGuild.Modify", guild_Modify},
-	
+
 	// Guild collection count properties
 	{"DiscordGuild.RoleCount.get", guild_GetRoleCount},
 	{"DiscordGuild.ChannelCount.get", guild_GetChannelCount},
 	{"DiscordGuild.ThreadCount.get", guild_GetThreadCount},
 	{"DiscordGuild.EmojiCount.get", guild_GetEmojiCount},
 	{"DiscordGuild.VoiceMemberCount.get", guild_GetVoiceMemberCount},
+
+	// Role
+	{"DiscordRole.DiscordRole", role_CreateEmpty},
+	{"DiscordRole.FetchRole", role_FetchRole},
+	{"DiscordRole.FindRole", role_FindRole},
+	{"DiscordRole.GetId", role_GetId},
+	{"DiscordRole.GetName", role_GetName},
+	{"DiscordRole.SetName", role_SetName},
+	{"DiscordRole.Color.get", role_GetColor},
+	{"DiscordRole.Color.set", role_SetColor},
+	{"DiscordRole.Hoist.get", role_GetHoist},
+	{"DiscordRole.GetIconHash", role_GetIconHash},
+	{"DiscordRole.GetUnicodeEmoji", role_GetUnicodeEmoji},
+	{"DiscordRole.Position.get", role_GetPosition},
+	{"DiscordRole.GetPermissions", role_GetPermissions},
+	{"DiscordRole.Managed.get", role_GetManaged},
+	{"DiscordRole.Mentionable.get", role_GetMentionable},
+	{"DiscordRole.HasTags.get", role_GetHasTags},
+	{"DiscordRole.IsPremiumSubscriberRole.get", role_GetIsPremiumSubscriberRole},
+	{"DiscordRole.IsAvailableForPurchase.get", role_GetIsAvailableForPurchase},
+	{"DiscordRole.IsGuildConnections.get", role_GetIsGuildConnections},
+	{"DiscordRole.GetBotId", role_GetBotId},
+	{"DiscordRole.GetIntegrationId", role_GetIntegrationId},
+	{"DiscordRole.GetSubscriptionListingId", role_GetSubscriptionListingId},
+	{"DiscordRole.HasPermission", role_HasPermission},
+	{"DiscordRole.GetMention", role_GetMention},
+	{"DiscordRole.Modify", role_Modify},
+	{"DiscordRole.Delete", role_Delete},
+	{"DiscordRole.AddToUser", role_AddToUser},
+	{"DiscordRole.RemoveFromUser", role_RemoveFromUser},
+
+	// Invite
+	{"DiscordInvite.DiscordInvite", invite_CreateInvite},
+	{"DiscordInvite.GetCode", invite_GetCode},
+	{"DiscordInvite.GetGuildId", invite_GetGuildId},
+	{"DiscordInvite.GetChannelId", invite_GetChannelId},
+	{"DiscordInvite.GetInviterId", invite_GetInviterId},
+	{"DiscordInvite.GetInviterUsername", invite_GetInviterUsername},
+	{"DiscordInvite.GetInviterAvatarUrl", invite_GetInviterAvatarUrl},
+	{"DiscordInvite.InviterIsBot.get", invite_GetInviterIsBot},
+	{"DiscordInvite.GetGuildName", invite_GetGuildName},
+	{"DiscordInvite.GetChannelName", invite_GetChannelName},
+	{"DiscordInvite.ChannelType.get", invite_GetChannelType},
+	{"DiscordInvite.ApproximatePresenceCount.get", invite_GetApproximatePresenceCount},
+	{"DiscordInvite.ApproximateMemberCount.get", invite_GetApproximateMemberCount},
+	{"DiscordInvite.Uses.get", invite_GetUses},
+	{"DiscordInvite.MaxUses.get", invite_GetMaxUses},
+	{"DiscordInvite.MaxUses.set", invite_SetMaxUses},
+	{"DiscordInvite.MaxAge.get", invite_GetMaxAge},
+	{"DiscordInvite.MaxAge.set", invite_SetMaxAge},
+	{"DiscordInvite.TargetType.get", invite_GetTargetType},
+	{"DiscordInvite.TargetType.set", invite_SetTargetType},
+	{"DiscordInvite.IsTemporary.get", invite_IsTemporary},
+	{"DiscordInvite.IsTemporary.set", invite_SetTemporary},
+	{"DiscordInvite.IsUnique.get", invite_IsUnique},
+	{"DiscordInvite.IsUnique.set", invite_SetUnique},
+	{"DiscordInvite.CreatedAt.get", invite_GetCreatedAt},
+	{"DiscordInvite.ExpiresAt.get", invite_GetExpiresAt},
+	{"DiscordInvite.SetTargetUserId", invite_SetTargetUserId},
+	{"DiscordInvite.Create", invite_Create},
+	{"DiscordInvite.Delete", invite_Delete},
 
 	// SlashCommand
 	{"DiscordSlashCommand.DiscordSlashCommand", slashcommand_CreateSlashCommand},
@@ -8485,7 +10628,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordSlashCommand.PermissionOverrideCount.get", slashcommand_GetPermissionOverrideCount},
 	{"DiscordSlashCommand.GetPermissionOverride", slashcommand_GetPermissionOverride},
 	{"DiscordSlashCommand.ApplyPermissionOverrides", slashcommand_ApplyPermissionOverrides},
-	
+
 	// New slash command advanced functionality
 	{"DiscordSlashCommand.ContextMenuType.get", slashcommand_GetContextMenuType},
 	{"DiscordSlashCommand.ContextMenuType.set", slashcommand_SetContextMenuType},
@@ -8539,7 +10682,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordMessage.ReplyEmbed", message_ReplyEmbed},
 	{"DiscordMessage.Crosspost", message_Crosspost},
 	{"DiscordMessage.CreateThread", message_CreateThread},
-	
+
 	// New message properties
 	{"DiscordMessage.Flags.get", message_GetFlags},
 	{"DiscordMessage.Flags.set", message_SetFlags},
@@ -8556,7 +10699,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordMessage.IsVoiceMessage.get", message_IsVoiceMessage},
 	{"DiscordMessage.HasSnapshot.get", message_HasSnapshot},
 	{"DiscordMessage.IsUsingComponentsV2.get", message_IsUsingComponentsV2},
-	
+
 	// Additional message properties
 	{"DiscordMessage.Timestamp.get", message_GetTimestamp},
 	{"DiscordMessage.EditedTimestamp.get", message_GetEditedTimestamp},
@@ -8577,11 +10720,12 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordMessage.GetAttachmentFilename", message_GetAttachmentFilename},
 	{"DiscordMessage.GetAttachmentURL", message_GetAttachmentURL},
 	{"DiscordMessage.GetAttachmentSize", message_GetAttachmentSize},
-	
+
 	// Message setters
 	{"DiscordMessage.SetContent", message_SetContent},
 	{"DiscordMessage.SetChannelId", message_SetChannelId},
 	{"DiscordMessage.SetNonce", message_SetNonce},
+	{"DiscordMessage.SetAllowedMentions", message_SetAllowedMentions},
 	{"DiscordMessage.AddEmbed", message_AddEmbed},
 	{"DiscordMessage.ClearEmbeds", message_ClearEmbeds},
 	{"DiscordMessage.Send", message_Send},
@@ -8590,10 +10734,12 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordChannel.DiscordChannel", channel_CreateFromId},
 	{"DiscordChannel.FetchChannel", channel_FetchChannel},
 	{"DiscordChannel.FindChannel", channel_FindChannel},
+	{"DiscordChannel.GetWebhooks", channel_GetWebhooks},
 	{"DiscordChannel.GetName", channel_GetName},
 	{"DiscordChannel.GetId", channel_GetId},
 	{"DiscordChannel.GetGuildId", channel_GetGuildId},
 	{"DiscordChannel.GetParentId", channel_GetParentId},
+	{"DiscordChannel.SetParentId", channel_SetParentId},
 	{"DiscordChannel.GetTopic", channel_GetTopic},
 	{"DiscordChannel.Type.get", channel_GetType},
 	{"DiscordChannel.Position.get", channel_GetPosition},
@@ -8619,7 +10765,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordChannel.UserLimit.set", channel_SetUserLimit},
 	{"DiscordChannel.Delete", channel_Delete},
 	{"DiscordChannel.SetParent", channel_SetParent},
-	
+
 	// New channel properties
 	{"DiscordChannel.Flags.get", channel_GetFlags},
 	{"DiscordChannel.GetOwnerId", channel_GetOwnerId},
@@ -8659,15 +10805,15 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordChannel.RemovePermissionOverwrite", channel_RemovePermissionOverwrite},
 	{"DiscordChannel.GetUserPermissions", channel_GetUserPermissions},
 	{"DiscordChannel.CreateInvite", channel_CreateInvite},
+	{"DiscordChannel.CreateInviteFromObject", channel_CreateInviteFromObject},
 	{"DiscordChannel.GetInvites", channel_GetInvites},
-	{"DiscordChannel.DeleteInvite", channel_DeleteInvite},
 	{"DiscordChannel.SendMessage", channel_SendMessage},
 	{"DiscordChannel.SendMessageEmbed", channel_SendMessageEmbed},
 	{"DiscordChannel.SendDiscordMessage", channel_SendDiscordMessage},
 	{"DiscordChannel.SetRTCRegion", channel_SetRTCRegion},
 
 	// Webhook
-	{"DiscordWebhook.DiscordWebhook", webhook_CreateWebhook},
+	{"DiscordWebhook.DiscordWebhook", webhook_CreateWebhookFromUrl},
 	{"DiscordWebhook.CreateFromIdToken", webhook_CreateWebhookFromIdToken},
 	{"DiscordWebhook.FetchWebhook", webhook_FetchWebhook},
 	{"DiscordWebhook.GetId", webhook_GetId},
@@ -8691,9 +10837,10 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordWebhook.Delete", webhook_Delete},
 	{"DiscordWebhook.Execute", webhook_Execute},
 	{"DiscordWebhook.ExecuteEmbed", webhook_ExecuteEmbed},
-	{"DiscordWebhook.CreateWebhook", discord_CreateWebhook},
-	{"DiscordWebhook.GetWebhook", discord_GetWebhook},
-	{"DiscordWebhook.GetChannelWebhooks", discord_GetChannelWebhooks},
+	{"DiscordWebhook.CreateWebhook", webhook_CreateWebhook},
+	{"DiscordWebhook.GetWebhook", webhook_GetWebhook},
+	{"DiscordWebhook.GetChannelWebhooks", webhook_GetChannelWebhooks},
+	{"DiscordWebhook.GetGuildWebhooks", webhook_GetGuildWebhooks},
 
 	// Embed
 	{"DiscordEmbed.DiscordEmbed", embed_CreateEmbed},
@@ -8755,6 +10902,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordInteraction.CreateResponseEmbed", interaction_CreateResponseEmbed},
 	{"DiscordInteraction.GetOptionValue", interaction_GetOptionValue},
 	{"DiscordInteraction.GetOptionValueInt", interaction_GetOptionValueInt},
+	{"DiscordInteraction.GetOptionValueInt64", interaction_GetOptionValueInt64},
 	{"DiscordInteraction.GetOptionValueFloat", interaction_GetOptionValueFloat},
 	{"DiscordInteraction.GetOptionValueBool", interaction_GetOptionValueBool},
 	{"DiscordInteraction.DeferReply", interaction_DeferReply},
@@ -8777,6 +10925,7 @@ const sp_nativeinfo_t discord_natives[] = {
 	{"DiscordAutocompleteInteraction.GetUserNickname", autocomplete_GetUserNickname},
 	{"DiscordAutocompleteInteraction.GetOptionValue", autocomplete_GetOptionValue},
 	{"DiscordAutocompleteInteraction.GetOptionValueInt", autocomplete_GetOptionValueInt},
+	{"DiscordAutocompleteInteraction.GetOptionValueInt64", autocomplete_GetOptionValueInt64},
 	{"DiscordAutocompleteInteraction.GetOptionValueFloat", autocomplete_GetOptionValueFloat},
 	{"DiscordAutocompleteInteraction.GetOptionValueBool", autocomplete_GetOptionValueBool},
 	{"DiscordAutocompleteInteraction.CreateAutocompleteResponse", autocomplete_CreateAutocompleteResponse},

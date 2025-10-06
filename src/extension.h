@@ -10,89 +10,41 @@
 #include "dpp/dpp.h"
 #include "discord.h"
 
+/**
+ * @brief HandleDestructor is a template class that is used to handle the destruction of objects.
+ * 
+ * @tparam T The type of the object
+ */
+template<typename T>
+class HandleDestructor : public IHandleTypeDispatch
+{
+public:
+	void OnHandleDestroy(HandleType_t type, void* object) override {
+		delete static_cast<T*>(object);
+	}
+};
+
+using DiscordHandler = HandleDestructor<DiscordClient>;
+using DiscordUserHandler = HandleDestructor<DiscordUser>;
+using DiscordMessageHandler = HandleDestructor<DiscordMessage>;
+using DiscordChannelHandler = HandleDestructor<DiscordChannel>;
+using DiscordWebhookHandler = HandleDestructor<DiscordWebhook>;
+using DiscordEmbedHandler = HandleDestructor<DiscordEmbed>;
+using DiscordInteractionHandler = HandleDestructor<DiscordInteraction>;
+using DiscordAutocompleteInteractionHandler = HandleDestructor<DiscordAutocompleteInteraction>;
+using DiscordSlashCommandHandler = HandleDestructor<DiscordSlashCommand>;
+using DiscordForumTagHandler = HandleDestructor<DiscordForumTag>;
+using DiscordGuildHandler = HandleDestructor<DiscordGuild>;
+using DiscordRoleHandler = HandleDestructor<DiscordRole>;
+using DiscordInviteHandler = HandleDestructor<DiscordInvite>;
+using HttpHeadersHandler = HandleDestructor<HttpHeaders>;
+using HttpCompletionHandler = HandleDestructor<HttpCompletion>;
+
 class DiscordExtension : public SDKExtension
 {
 public:
 	virtual bool SDK_OnLoad(char* error, size_t maxlength, bool late);
 	virtual void SDK_OnUnload();
-};
-
-class DiscordHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordUserHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordMessageHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordChannelHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordWebhookHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordEmbedHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordInteractionHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordAutocompleteInteractionHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordSlashCommandHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordForumTagHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class DiscordGuildHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class HttpHeadersHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
-};
-
-class HttpCompletionHandler : public IHandleTypeDispatch
-{
-public:
-	void OnHandleDestroy(HandleType_t type, void* object);
 };
 
 extern DiscordExtension g_DiscordExt;
@@ -110,6 +62,8 @@ extern HandleType_t
 	g_DiscordSlashCommandHandle,
 	g_DiscordForumTagHandle,
 	g_DiscordGuildHandle,
+	g_DiscordRoleHandle,
+	g_DiscordInviteHandle,
 	g_HttpHeadersHandle,
 	g_HttpCompletionHandle;
 
@@ -124,6 +78,8 @@ extern DiscordAutocompleteInteractionHandler g_DiscordAutocompleteInteractionHan
 extern DiscordSlashCommandHandler g_DiscordSlashCommandHandler;
 extern DiscordForumTagHandler g_DiscordForumTagHandler;
 extern DiscordGuildHandler g_DiscordGuildHandler;
+extern DiscordRoleHandler g_DiscordRoleHandler;
+extern DiscordInviteHandler g_DiscordInviteHandler;
 extern HttpHeadersHandler g_HttpHeadersHandler;
 extern HttpCompletionHandler g_HttpCompletionHandler;
 

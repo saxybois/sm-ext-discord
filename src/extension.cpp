@@ -17,6 +17,8 @@ HandleType_t
 	g_DiscordSlashCommandHandle,
 	g_DiscordForumTagHandle,
 	g_DiscordGuildHandle,
+	g_DiscordRoleHandle,
+	g_DiscordInviteHandle,
 	g_HttpHeadersHandle,
 	g_HttpCompletionHandle;
 
@@ -31,9 +33,10 @@ DiscordAutocompleteInteractionHandler g_DiscordAutocompleteInteractionHandler;
 DiscordSlashCommandHandler g_DiscordSlashCommandHandler;
 DiscordForumTagHandler g_DiscordForumTagHandler;
 DiscordGuildHandler g_DiscordGuildHandler;
+DiscordRoleHandler g_DiscordRoleHandler;
+DiscordInviteHandler g_DiscordInviteHandler;
 HttpHeadersHandler g_HttpHeadersHandler;
 HttpCompletionHandler g_HttpCompletionHandler;
-
 
 ThreadSafeQueue<std::function<void()>> g_TaskQueue;
 
@@ -66,6 +69,8 @@ bool DiscordExtension::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	g_DiscordSlashCommandHandle = handlesys->CreateType("DiscordSlashCommand", &g_DiscordSlashCommandHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
 	g_DiscordForumTagHandle = handlesys->CreateType("DiscordForumTag", &g_DiscordForumTagHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
 	g_DiscordGuildHandle = handlesys->CreateType("DiscordGuild", &g_DiscordGuildHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
+	g_DiscordRoleHandle = handlesys->CreateType("DiscordRole", &g_DiscordRoleHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
+	g_DiscordInviteHandle = handlesys->CreateType("DiscordInvite", &g_DiscordInviteHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
 	g_HttpHeadersHandle = handlesys->CreateType("HttpHeaders", &g_HttpHeadersHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
 	g_HttpCompletionHandle = handlesys->CreateType("HttpCompletion", &g_HttpCompletionHandler, 0, nullptr, &haDefaults, myself->GetIdentity(), nullptr);
 
@@ -87,87 +92,10 @@ void DiscordExtension::SDK_OnUnload()
 	handlesys->RemoveType(g_DiscordSlashCommandHandle, myself->GetIdentity());
 	handlesys->RemoveType(g_DiscordForumTagHandle, myself->GetIdentity());
 	handlesys->RemoveType(g_DiscordGuildHandle, myself->GetIdentity());
+	handlesys->RemoveType(g_DiscordRoleHandle, myself->GetIdentity());
+	handlesys->RemoveType(g_DiscordInviteHandle, myself->GetIdentity());
 	handlesys->RemoveType(g_HttpHeadersHandle, myself->GetIdentity());
 	handlesys->RemoveType(g_HttpCompletionHandle, myself->GetIdentity());
 
 	smutils->RemoveGameFrameHook(&OnGameFrame);
-}
-
-void DiscordHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordClient* discord = (DiscordClient*)object;
-	discord->Stop();
-	delete discord;
-}
-
-void DiscordUserHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordUser* user = (DiscordUser*)object;
-	delete user;
-}
-
-void DiscordMessageHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordMessage* message = (DiscordMessage*)object;
-	delete message;
-}
-
-void DiscordChannelHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordChannel* channel = (DiscordChannel*)object;
-	delete channel;
-}
-
-void DiscordWebhookHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordWebhook* webhook = (DiscordWebhook*)object;
-	delete webhook;
-}
-
-void DiscordEmbedHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordEmbed* embed = (DiscordEmbed*)object;
-	delete embed;
-}
-
-void DiscordInteractionHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordInteraction* interaction = (DiscordInteraction*)object;
-	delete interaction;
-}
-
-void DiscordAutocompleteInteractionHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordAutocompleteInteraction* interaction = (DiscordAutocompleteInteraction*)object;
-	delete interaction;
-}
-
-void DiscordSlashCommandHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordSlashCommand* command = (DiscordSlashCommand*)object;
-	delete command;
-}
-
-void DiscordForumTagHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordForumTag* tag = (DiscordForumTag*)object;
-	delete tag;
-}
-
-void DiscordGuildHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	DiscordGuild* guild = (DiscordGuild*)object;
-	delete guild;
-}
-
-void HttpHeadersHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	HttpHeaders* headers = (HttpHeaders*)object;
-	delete headers;
-}
-
-void HttpCompletionHandler::OnHandleDestroy(HandleType_t type, void* object)
-{
-	HttpCompletion* completion = (HttpCompletion*)object;
-	delete completion;
 }
